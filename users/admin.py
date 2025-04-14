@@ -3,17 +3,17 @@ from django.contrib.auth.admin import UserAdmin
 from .models import User, DriverLicenseVerification
 
 class CustomUserAdmin(UserAdmin):
-    """Административная панель для пользователей"""
+    """Admin panel for users"""
     
     list_display = ('username', 'email', 'first_name', 'last_name', 'is_verified_driver', 'is_staff')
     fieldsets = UserAdmin.fieldsets + (
-        ('Дополнительная информация', {'fields': ('phone_number', 'date_of_birth', 'profile_picture',
-                                                'driver_license_number', 'driver_license_expiry',
-                                                'is_verified_driver', 'rating', 'is_blocked')}),
+        ('Additional Information', {'fields': ('phone_number', 'date_of_birth', 'profile_picture',
+                                               'driver_license_number', 'driver_license_expiry',
+                                               'is_verified_driver', 'rating', 'is_blocked')}), 
     )
 
 class DriverLicenseVerificationAdmin(admin.ModelAdmin):
-    """Административная панель для верификации водительских прав"""
+    """Admin panel for driver license verification"""
     
     list_display = ('user', 'status', 'created_at', 'updated_at')
     list_filter = ('status',)

@@ -21,10 +21,10 @@ class BookingAdmin(admin.ModelAdmin):
             BookingHistory.objects.create(
                 booking=booking,
                 status='confirmed',
-                notes="Статус изменен на 'Подтверждено' через административную панель"
+                notes="Status changed to 'Confirmed' via admin panel"
             )
-        self.message_user(request, f"Выбранные бронирования отмечены как подтвержденные")
-    mark_as_confirmed.short_description = "Отметить как подтвержденные"
+        self.message_user(request, f"Selected bookings have been marked as confirmed")
+    mark_as_confirmed.short_description = "Mark as confirmed"
     
     def mark_as_active(self, request, queryset):
         for booking in queryset:
@@ -35,10 +35,10 @@ class BookingAdmin(admin.ModelAdmin):
             BookingHistory.objects.create(
                 booking=booking,
                 status='active',
-                notes="Статус изменен на 'Активно' через административную панель"
+                notes="Status changed to 'Active' via admin panel"
             )
-        self.message_user(request, f"Выбранные бронирования отмечены как активные")
-    mark_as_active.short_description = "Отметить как активные"
+        self.message_user(request, f"Selected bookings have been marked as active")
+    mark_as_active.short_description = "Mark as active"
     
     def mark_as_completed(self, request, queryset):
         for booking in queryset:
@@ -49,10 +49,10 @@ class BookingAdmin(admin.ModelAdmin):
             BookingHistory.objects.create(
                 booking=booking,
                 status='completed',
-                notes="Статус изменен на 'Завершено' через административную панель"
+                notes="Status changed to 'Completed' via admin panel"
             )
-        self.message_user(request, f"Выбранные бронирования отмечены как завершенные")
-    mark_as_completed.short_description = "Отметить как завершенные"
+        self.message_user(request, f"Selected bookings have been marked as completed")
+    mark_as_completed.short_description = "Mark as completed"
     
     def mark_as_cancelled(self, request, queryset):
         for booking in queryset:
@@ -63,10 +63,10 @@ class BookingAdmin(admin.ModelAdmin):
             BookingHistory.objects.create(
                 booking=booking,
                 status='cancelled',
-                notes="Статус изменен на 'Отменено' через административную панель"
+                notes="Status changed to 'Cancelled' via admin panel"
             )
-        self.message_user(request, f"Выбранные бронирования отмечены как отмененные")
-    mark_as_cancelled.short_description = "Отметить как отмененные"
+        self.message_user(request, f"Selected bookings have been marked as cancelled")
+    mark_as_cancelled.short_description = "Mark as cancelled"
 
 class BookingHistoryAdmin(admin.ModelAdmin):
     list_display = ('booking', 'status', 'timestamp')

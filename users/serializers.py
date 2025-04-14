@@ -6,7 +6,7 @@ from .models import DriverLicenseVerification
 User = get_user_model()
 
 class UserSerializer(serializers.ModelSerializer):
-    """Сериализатор для модели пользователя"""
+    """Serializer for the User model"""
     
     class Meta:
         model = User
@@ -16,7 +16,7 @@ class UserSerializer(serializers.ModelSerializer):
         read_only_fields = ('is_verified_driver', 'rating', 'is_blocked', 'created_at')
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
-    """Сериализатор для регистрации пользователя"""
+    """Serializer for user registration"""
     
     password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
     password2 = serializers.CharField(write_only=True, required=True)
@@ -28,7 +28,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     
     def validate(self, attrs):
         if attrs['password'] != attrs['password2']:
-            raise serializers.ValidationError({"password": "Пароли не совпадают"})
+            raise serializers.ValidationError({"password": "Passwords do not match"})
         return attrs
     
     def create(self, validated_data):
@@ -37,7 +37,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         return user
 
 class DriverLicenseVerificationSerializer(serializers.ModelSerializer):
-    """Сериализатор для верификации водительских прав"""
+    """Serializer for driver license verification"""
     
     class Meta:
         model = DriverLicenseVerification
@@ -46,14 +46,14 @@ class DriverLicenseVerificationSerializer(serializers.ModelSerializer):
         read_only_fields = ('status', 'comment', 'created_at')
 
 class UserProfileUpdateSerializer(serializers.ModelSerializer):
-    """Сериализатор для обновления профиля пользователя"""
+    """Serializer for updating user profile"""
     
     class Meta:
         model = User
         fields = ('first_name', 'last_name', 'phone_number', 'date_of_birth', 'profile_picture')
 
 class ChangePasswordSerializer(serializers.Serializer):
-    """Сериализатор для смены пароля"""
+    """Serializer for changing password"""
     
     old_password = serializers.CharField(required=True)
     new_password = serializers.CharField(required=True, validators=[validate_password])
@@ -61,5 +61,5 @@ class ChangePasswordSerializer(serializers.Serializer):
     
     def validate(self, attrs):
         if attrs['new_password'] != attrs['new_password2']:
-            raise serializers.ValidationError({"new_password": "Пароли не совпадают"})
+            raise serializers.ValidationError({"new_password": "Passwords do not match"})
         return attrs

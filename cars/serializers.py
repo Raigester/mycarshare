@@ -2,14 +2,14 @@ from rest_framework import serializers
 from .models import CarBrand, CarModel, Car, CarPhoto, CarReview
 
 class CarBrandSerializer(serializers.ModelSerializer):
-    """Сериализатор для брендов автомобилей"""
+    """Serializer for car brands"""
     
     class Meta:
         model = CarBrand
         fields = '__all__'
 
 class CarModelSerializer(serializers.ModelSerializer):
-    """Сериализатор для моделей автомобилей"""
+    """Serializer for car models"""
     
     brand_name = serializers.ReadOnlyField(source='brand.name')
     
@@ -18,14 +18,14 @@ class CarModelSerializer(serializers.ModelSerializer):
         fields = ('id', 'brand', 'brand_name', 'name')
 
 class CarPhotoSerializer(serializers.ModelSerializer):
-    """Сериализатор для фотографий автомобилей"""
+    """Serializer for car photos"""
     
     class Meta:
         model = CarPhoto
         fields = ('id', 'photo', 'caption')
 
 class CarReviewSerializer(serializers.ModelSerializer):
-    """Сериализатор для отзывов об автомобилях"""
+    """Serializer for car reviews"""
     
     user_username = serializers.ReadOnlyField(source='user.username')
     
@@ -35,7 +35,7 @@ class CarReviewSerializer(serializers.ModelSerializer):
         read_only_fields = ('user', 'created_at')
 
 class CarSerializer(serializers.ModelSerializer):
-    """Сериализатор для автомобилей"""
+    """Serializer for cars"""
     
     brand_name = serializers.ReadOnlyField(source='model.brand.name')
     model_name = serializers.ReadOnlyField(source='model.name')
@@ -51,7 +51,7 @@ class CarSerializer(serializers.ModelSerializer):
                   'main_photo', 'photos', 'rating')
 
 class CarDetailSerializer(CarSerializer):
-    """Расширенный сериализатор для деталей автомобиля"""
+    """Extended serializer for car details"""
     
     reviews = CarReviewSerializer(many=True, read_only=True)
     
