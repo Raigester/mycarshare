@@ -89,10 +89,10 @@ class BookingSerializer(serializers.ModelSerializer):
                 
                 # Add option costs
                 if data.get('additional_driver'):
-                    price += 500  # Example cost for an additional driver
+                    price += 500  # Cost for an additional driver
                 
                 if data.get('baby_seat'):
-                    price += 300  # Example cost for a baby seat
+                    price += 300  # Cost for a baby seat
                 
                 # Assign calculated price
                 self.context['total_price'] = round(price, 2)
