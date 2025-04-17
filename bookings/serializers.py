@@ -1,3 +1,4 @@
+from decimal import Decimal
 from rest_framework import serializers
 from django.utils import timezone
 from .models import Booking, BookingHistory
@@ -80,12 +81,18 @@ class BookingSerializer(serializers.ModelSerializer):
                 hours = duration.total_seconds() / 3600
                 days = hours / 24
                 
-                # Calculate price by days if duration exceeds 1 day, otherwise by hours
+                # Calculate price by days if duration exceeds 1 day, otherwise by hours and minutes
                 if days >= 1:
+                    # Daily rate
                     total_days = int(days) + (1 if days % 1 > 0 else 0)
-                    price = car.price_per_day * total_days
+                    price = car.price_per_day * Decimal(str(total_days))
+                elif hours >= 1:
+                    # Hourly rate
+                    price = car.price_per_hour * Decimal(str(hours))
                 else:
-                    price = car.price_per_hour * hours
+                    # Minute rate (for bookings less than 1 hour)
+                    minutes = duration.total_seconds() / 60
+                    price = car.price_per_minute * Decimal(str(minutes))
                 
                 # Add option costs
                 if data.get('additional_driver'):

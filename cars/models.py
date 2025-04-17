@@ -54,6 +54,7 @@ class Car(models.Model):
     transmission = models.CharField(max_length=20, choices=TRANSMISSION_CHOICES)
     
     # Rental characteristics
+    price_per_minute = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
     price_per_hour = models.DecimalField(max_digits=10, decimal_places=2)
     price_per_day = models.DecimalField(max_digits=10, decimal_places=2)
     deposit_amount = models.DecimalField(max_digits=10, decimal_places=2)
