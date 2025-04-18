@@ -191,7 +191,7 @@ class BookingViewSet(viewsets.ModelViewSet):
         booking = Booking.objects.create(
             user=user,
             car=car,
-            start_time=now,
+            start_time=now + timezone.timedelta(seconds=1),
             end_time=now + timezone.timedelta(days=1),  # Temporarily set for one day
             status='active',
             last_billing_time=now,
@@ -238,7 +238,7 @@ class BookingViewSet(viewsets.ModelViewSet):
         
         # Calculate the last billing
         time_diff = now - booking.last_billing_time
-        minutes_to_bill = int(time_diff.total_seconds() / 60)
+        minutes_to_bill = max(1, int(time_diff.total_seconds() / 60))
         
         if minutes_to_bill > 0:
             amount_to_bill = booking.car.price_per_minute * Decimal(str(minutes_to_bill))
