@@ -75,35 +75,7 @@ class BookingSerializer(serializers.ModelSerializer):
                     raise serializers.ValidationError(
                         {"car": "The car is already booked for this period"}
                     )
-                
-                # Calculate preliminary price
-                duration = end_time - start_time
-                hours = duration.total_seconds() / 3600
-                days = hours / 24
-                
-                # Calculate price by days if duration exceeds 1 day, otherwise by hours and minutes
-                if days >= 1:
-                    # Daily rate
-                    total_days = int(days) + (1 if days % 1 > 0 else 0)
-                    price = car.price_per_day * Decimal(str(total_days))
-                elif hours >= 1:
-                    # Hourly rate
-                    price = car.price_per_hour * Decimal(str(hours))
-                else:
-                    # Minute rate (for bookings less than 1 hour)
-                    minutes = duration.total_seconds() / 60
-                    price = car.price_per_minute * Decimal(str(minutes))
-                
-                # Add option costs
-                if data.get('additional_driver'):
-                    price += 500  # Cost for an additional driver
-                
-                if data.get('baby_seat'):
-                    price += 300  # Cost for a baby seat
-                
-                # Assign calculated price
-                self.context['total_price'] = round(price, 2)
-        
+
         return data
     
     def create(self, validated_data):

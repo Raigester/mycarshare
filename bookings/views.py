@@ -1,3 +1,4 @@
+from decimal import Decimal
 from rest_framework import viewsets, permissions, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -154,3 +155,125 @@ class BookingViewSet(viewsets.ModelViewSet):
         
         serializer = self.get_serializer(bookings, many=True)
         return Response(serializer.data)
+    
+    @action(detail=False, methods=['post'])
+    def start_rental(self, request):
+        """Start car rental"""
+        user = request.user
+        car_id = request.data.get('car')
+        
+        try:
+            car = Car.objects.get(id=car_id, status='available')
+        except Car.DoesNotExist:
+            return Response(
+                {"error": "Car not available"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Check user's balance
+        try:
+            balance = user.balance
+            min_required = car.price_per_minute * Decimal('60')  # Minimum for 1 hour
+            
+            if balance.amount < min_required:
+                return Response(
+                    {"error": f"Insufficient balance. Minimum required: {min_required}"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        except:
+            return Response(
+                {"error": "User has no balance"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Create a new booking record
+        now = timezone.now()
+        booking = Booking.objects.create(
+            user=user,
+            car=car,
+            start_time=now,
+            end_time=now + timezone.timedelta(days=1),  # Temporarily set for one day
+            status='active',
+            last_billing_time=now,
+            minutes_billed=0,
+            total_price=Decimal('0.00'),  # Initial amount
+            pickup_location=f"{car.current_latitude},{car.current_longitude}" if car.current_latitude else ""
+        )
+        
+        # Create a history record
+        BookingHistory.objects.create(
+            booking=booking,
+            status='active',
+            notes="Rental started"
+        )
+        
+        # Update car status
+        car.status = 'busy'
+        car.save()
+        
+        return Response({
+            "message": "Rental successfully started",
+            "booking_id": booking.id
+        })
+    
+    @action(detail=True, methods=['post'])
+    def end_rental(self, request, pk=None):
+        """End car rental"""
+        booking = self.get_object()
+        
+        if booking.user != request.user and not request.user.is_staff:
+            return Response(
+                {"error": "You can only end your own rentals"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        if booking.status != 'active':
+            return Response(
+                {"error": "Booking is not active"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # End the rental
+        now = timezone.now()
+        
+        # Calculate the last billing
+        time_diff = now - booking.last_billing_time
+        minutes_to_bill = int(time_diff.total_seconds() / 60)
+        
+        if minutes_to_bill > 0:
+            amount_to_bill = booking.car.price_per_minute * Decimal(str(minutes_to_bill))
+            
+            # Deduct money
+            try:
+                balance = booking.user.balance
+                if balance.amount >= amount_to_bill:
+                    balance.amount -= amount_to_bill
+                    balance.save()
+            except:
+                pass  # If no balance, just end the rental
+            
+            booking.minutes_billed += minutes_to_bill
+        
+        # Update booking data
+        booking.status = 'completed'
+        booking.end_time = now
+        booking.total_price = booking.car.price_per_minute * Decimal(str(booking.minutes_billed))
+        booking.save()
+        
+        # Create a history record
+        BookingHistory.objects.create(
+            booking=booking,
+            status='completed',
+            notes=f"Rental ended. Total minutes: {booking.minutes_billed}, total price: {booking.total_price}"
+        )
+        
+        # Update car status
+        car = booking.car
+        car.status = 'available'
+        car.save()
+        
+        return Response({
+            "message": "Rental successfully ended",
+            "total_time": f"{booking.minutes_billed} minutes",
+            "total_price": str(booking.total_price)
+        })

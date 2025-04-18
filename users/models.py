@@ -1,3 +1,4 @@
+from decimal import Decimal
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import RegexValidator
@@ -51,3 +52,11 @@ class DriverLicenseVerification(models.Model):
     
     def __str__(self):
         return f"{self.user.username} - {self.status}"
+
+class UserBalance(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='balance')
+    amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    last_updated = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"Balance for {self.user.username}: {self.amount}"

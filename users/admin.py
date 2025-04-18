@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import User, DriverLicenseVerification
+from .models import User, DriverLicenseVerification, UserBalance
 
 class CustomUserAdmin(UserAdmin):
     """Admin panel for users"""
@@ -20,5 +20,11 @@ class DriverLicenseVerificationAdmin(admin.ModelAdmin):
     search_fields = ('user__username', 'user__email')
     readonly_fields = ('created_at', 'updated_at')
 
+class UserBalanceAdmin(admin.ModelAdmin):
+    """Admin panel for user balance"""
+    
+    list_display = ('user', 'amount')
+
 admin.site.register(User, CustomUserAdmin)
 admin.site.register(DriverLicenseVerification, DriverLicenseVerificationAdmin)
+admin.site.register(UserBalance, UserBalanceAdmin)

@@ -36,6 +36,9 @@ class Booking(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
+    # Billing information
+    last_billing_time = models.DateTimeField(null=True, blank=True)
+    minutes_billed = models.PositiveIntegerField(default=0)
     def __str__(self):
         return f"Booking {self.id} - {self.car} ({self.status})"
     

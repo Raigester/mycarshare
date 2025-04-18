@@ -1,8 +1,9 @@
+from decimal import Decimal
 from rest_framework import viewsets, generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from django.contrib.auth import get_user_model
-from .models import DriverLicenseVerification
+from .models import DriverLicenseVerification, UserBalance
 from .serializers import (
     UserSerializer, UserRegistrationSerializer, DriverLicenseVerificationSerializer,
     UserProfileUpdateSerializer, ChangePasswordSerializer
@@ -100,3 +101,43 @@ class DriverLicenseVerificationViewSet(viewsets.ModelViewSet):
         verification.save()
         
         return Response({"message": "Verification rejected"})
+
+class UserBalanceView(generics.GenericAPIView):
+    """API for managing user balance"""
+    
+    permission_classes = [permissions.IsAuthenticated]
+    
+    @action(detail=False, methods=['post'])
+    def add_balance(self, request):
+        """Add funds to the user's balance"""
+        user = request.user
+        amount = Decimal(request.data.get('amount', '0'))
+        
+        if amount <= 0:
+            return Response(
+                {"error": "Amount must be positive"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        balance, created = UserBalance.objects.get_or_create(user=user)
+        balance.amount += amount
+        balance.save()
+        
+        return Response({
+            "message": f"Balance successfully updated",
+            "current_balance": balance.amount
+        })
+    
+    @action(detail=False, methods=['get'])
+    def get_balance(self, request):
+        """Retrieve the user's current balance"""
+        user = request.user
+        
+        try:
+            balance = user.balance
+        except UserBalance.DoesNotExist:
+            balance = UserBalance.objects.create(user=user)
+        
+        return Response({
+            "balance": balance.amount
+        })
