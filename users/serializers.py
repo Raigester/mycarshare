@@ -43,7 +43,7 @@ class DriverLicenseVerificationSerializer(serializers.ModelSerializer):
         model = DriverLicenseVerification
         fields = ('id', 'user', 'front_image', 'back_image', 'selfie_with_license', 
                   'status', 'comment', 'created_at')
-        read_only_fields = ('status', 'comment', 'created_at')
+        read_only_fields = ('status', 'comment', 'created_at','user')
 
 class UserProfileUpdateSerializer(serializers.ModelSerializer):
     """Serializer for updating user profile"""
