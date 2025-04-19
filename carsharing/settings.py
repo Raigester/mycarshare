@@ -1,17 +1,18 @@
 import os
 from pathlib import Path
 from datetime import timedelta
+from decouple import config, Csv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-your-secret-key'
+SECRET_KEY = config('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = config('DEBUG', cast=bool)
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', cast=Csv())
 
 # Application definition
 INSTALLED_APPS = [
@@ -141,7 +142,7 @@ SIMPLE_JWT = {
     'ROTATE_REFRESH_TOKENS': False,
     'BLACKLIST_AFTER_ROTATION': True,
     'ALGORITHM': 'HS256',
-    'SIGNING_KEY': SECRET_KEY,
+    'SIGNING_KEY': config('SIGNING_KEY'),
     'VERIFYING_KEY': None,
     'AUTH_HEADER_TYPES': ('Bearer',),
     'USER_ID_FIELD': 'id',
@@ -164,8 +165,8 @@ SWAGGER_SETTINGS = {
     'USE_SESSION_AUTH': False,
 }
 
-CELERY_BROKER_URL = 'redis://localhost:6379/0'
-CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+CELERY_BROKER_URL = f"redis://{config('REDIS_HOST')}:{config('REDIS_PORT')}/{config('REDIS_DB')}"
+CELERY_RESULT_BACKEND = CELERY_BROKER_URL
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
