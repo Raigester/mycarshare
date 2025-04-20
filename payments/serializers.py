@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Payment, LiqPayPayment, PaymentTransaction, WayForPayPayment
+from .models import Payment, LiqPayPayment, PaymentTransaction
 from django.conf import settings
 from decimal import Decimal
 
@@ -10,14 +10,6 @@ class PaymentSerializer(serializers.ModelSerializer):
         model = Payment
         fields = ('id', 'user', 'amount', 'payment_provider', 'status', 'created_at')
         read_only_fields = ('user', 'status', 'created_at')
-
-class WayForPayPaymentSerializer(serializers.ModelSerializer):
-    """Serializer for WayForPay payments"""
-    
-    class Meta:
-        model = WayForPayPayment
-        fields = ('payment', 'wayforpay_order_id', 'wayforpay_transaction_id', 'wayforpay_signature', 'wayforpay_status')
-        read_only_fields = ('wayforpay_order_id', 'wayforpay_transaction_id', 'wayforpay_signature', 'wayforpay_status')
 
 class LiqPayPaymentSerializer(serializers.ModelSerializer):
     """Serializer for LiqPay payments"""

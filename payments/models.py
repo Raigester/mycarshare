@@ -31,17 +31,6 @@ class Payment(models.Model):
     def __str__(self):
         return f"{self.user.username} - {self.amount} - {self.payment_provider} - {self.status}"
 
-class WayForPayPayment(models.Model):
-    """WayForPay payment details"""
-    payment = models.OneToOneField(Payment, on_delete=models.CASCADE, related_name='wayforpay_details')
-    wayforpay_order_id = models.CharField(max_length=255)
-    wayforpay_transaction_id = models.CharField(max_length=255, blank=True, null=True)
-    wayforpay_signature = models.TextField(blank=True, null=True)
-    wayforpay_status = models.CharField(max_length=50, blank=True, null=True)
-    
-    def __str__(self):
-        return f"WayForPay payment: {self.wayforpay_order_id}"
-
 class LiqPayPayment(models.Model):
     """LiqPay payment details"""
     payment = models.OneToOneField(Payment, on_delete=models.CASCADE, related_name='liqpay_details')
