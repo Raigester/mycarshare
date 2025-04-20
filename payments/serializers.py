@@ -1,92 +1,60 @@
 from rest_framework import serializers
-from django.utils import timezone
-from .models import Payment, Invoice
+from .models import Payment, LiqPayPayment, PaymentTransaction, WayForPayPayment
+from django.conf import settings
+from decimal import Decimal
 
 class PaymentSerializer(serializers.ModelSerializer):
-    """Serializer for payments"""
-    
-    user_name = serializers.ReadOnlyField(source='user.get_full_name')
-    booking_details = serializers.SerializerMethodField()
+    """Serializer for the Payment model"""
     
     class Meta:
         model = Payment
-        fields = '__all__'
-        read_only_fields = ('user', 'transaction_id', 'status', 'created_at', 'updated_at')
-    
-    def get_booking_details(self, obj):
-        """Get basic booking information"""
-        if not obj.booking:
-            return None
-        
-        booking = obj.booking
-        return {
-            'id': booking.id,
-            'car': f"{booking.car.model.brand.name} {booking.car.model.name}",
-            'license_plate': booking.car.license_plate,
-            'start_time': booking.start_time,
-            'end_time': booking.end_time,
-            'status': booking.status
-        }
+        fields = ('id', 'user', 'amount', 'payment_provider', 'status', 'created_at')
+        read_only_fields = ('user', 'status', 'created_at')
 
-class InvoiceSerializer(serializers.ModelSerializer):
-    """Serializer for invoices"""
-    
-    user_name = serializers.ReadOnlyField(source='user.get_full_name')
-    is_overdue = serializers.SerializerMethodField()
-    payment_details = serializers.SerializerMethodField()
+class WayForPayPaymentSerializer(serializers.ModelSerializer):
+    """Serializer for WayForPay payments"""
     
     class Meta:
-        model = Invoice
-        fields = '__all__'
-        read_only_fields = ('user', 'payment', 'created_at', 'updated_at')
-    
-    def get_is_overdue(self, obj):
-        """Check if the invoice is overdue"""
-        return obj.status == 'pending' and obj.due_date < timezone.now()
-    
-    def get_payment_details(self, obj):
-        """Get payment information if it exists"""
-        if not obj.payment:
-            return None
-        
-        return {
-            'id': obj.payment.id,
-            'amount': obj.payment.amount,
-            'status': obj.payment.status,
-            'payment_method': obj.payment.payment_method,
-            'transaction_id': obj.payment.transaction_id,
-            'created_at': obj.payment.created_at
-        }
+        model = WayForPayPayment
+        fields = ('payment', 'wayforpay_order_id', 'wayforpay_transaction_id', 'wayforpay_signature', 'wayforpay_status')
+        read_only_fields = ('wayforpay_order_id', 'wayforpay_transaction_id', 'wayforpay_signature', 'wayforpay_status')
 
-class PaymentCreateSerializer(serializers.ModelSerializer):
-    """Serializer for creating payments"""
+class LiqPayPaymentSerializer(serializers.ModelSerializer):
+    """Serializer for LiqPay payments"""
     
     class Meta:
-        model = Payment
-        fields = ('booking', 'amount', 'payment_type', 'payment_method', 'description')
+        model = LiqPayPayment  
+        fields = ('payment', 'liqpay_order_id', 'liqpay_signature', 'liqpay_data')
+        read_only_fields = ('liqpay_order_id', 'liqpay_signature', 'liqpay_data')
+
+class PaymentTransactionSerializer(serializers.ModelSerializer):
+    """Serializer for payment transactions"""
     
-    def validate(self, data):
-        """Additional validation when creating a payment"""
-        
-        # Check booking if specified
-        booking = data.get('booking')
-        if booking:
-            # Check that the user can pay for this booking
-            user = self.context['request'].user
-            if booking.user != user and not user.is_staff:
-                raise serializers.ValidationError(
-                    {"booking": "You cannot pay for someone else's bookings"}
-                )
-            
-            # Check booking status
-            if booking.status not in ['pending', 'confirmed']:
-                raise serializers.ValidationError(
-                    {"booking": "Only pending or confirmed bookings can be paid"}
-                )
-        
-        return data
+    class Meta:
+        model = PaymentTransaction
+        fields = ('id', 'user', 'payment', 'amount', 'transaction_type', 
+                  'description', 'balance_after', 'created_at')
+        read_only_fields = ('user', 'payment', 'balance_after', 'created_at')
+
+class CreatePaymentSerializer(serializers.Serializer):
+    """Serializer for creating a payment"""
     
-    def create(self, validated_data):
-        # Add the current user to the payment
-        validated_data['user'] = self.context['request'].user
-        return super().create(validated_data)
+    amount = serializers.DecimalField(max_digits=10, decimal_places=2)
+    payment_provider = serializers.ChoiceField(choices=Payment.PAYMENT_PROVIDER_CHOICES)
+    
+    def validate_amount(self, value):
+        """Validate payment amount"""
+        min_payment = Decimal(settings.MIN_PAYMENT_AMOUNT)
+        max_payment = Decimal(settings.MAX_PAYMENT_AMOUNT)
+        
+        if value < min_payment:
+            raise serializers.ValidationError(
+                f"Amount must be at least {min_payment}"
+            )
+        
+        if value > max_payment:
+            raise serializers.ValidationError(
+                f"Amount cannot exceed {max_payment}"
+            )
+        
+        return value

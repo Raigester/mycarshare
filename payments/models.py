@@ -1,71 +1,73 @@
 from decimal import Decimal
 from django.db import models
-from django.core.validators import MinValueValidator
+from django.contrib.auth import get_user_model
+from django.utils.translation import gettext_lazy as _
+
+User = get_user_model()
 
 class Payment(models.Model):
-    """Model for payments"""
+    """Base payment model"""
+    PAYMENT_STATUS_CHOICES = (
+        ('pending', _('Pending')),
+        ('completed', _('Completed')),
+        ('failed', _('Failed')),
+        ('cancelled', _('Cancelled')),
+        ('refunded', _('Refunded')),
+    )
     
-    STATUS_CHOICES = [
-        ('pending', 'Pending'),
-        ('completed', 'Completed'),
-        ('failed', 'Failed'),
-        ('refunded', 'Refunded')
-    ]
+    PAYMENT_PROVIDER_CHOICES = (
+        ('liqpay', _('LiqPay')),
+        ('wayforpay', _('WayForPay')),
+    )
     
-    PAYMENT_TYPES = [
-        ('booking', 'Booking payment'),
-        ('deposit', 'Deposit'),
-        ('fine', 'Fine'),
-        ('refund', 'Refund')
-    ]
-    
-    user = models.ForeignKey('users.User', on_delete=models.CASCADE, related_name='payments')
-    booking = models.ForeignKey('bookings.Booking', on_delete=models.CASCADE, 
-                                related_name='payments', null=True, blank=True)
-    
-    amount = models.DecimalField(max_digits=10, decimal_places=2, 
-                          validators=[MinValueValidator(Decimal('0.01'))])
-    payment_type = models.CharField(max_length=20, choices=PAYMENT_TYPES)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
-    
-    # Payment information
-    transaction_id = models.CharField(max_length=100, blank=True)
-    payment_method = models.CharField(max_length=50, blank=True)
-    
-    # Additional information
-    description = models.TextField(blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    
-    def __str__(self):
-        return f"Payment {self.id} - {self.user.username} ({self.amount} RUB)"
-
-class Invoice(models.Model):
-    """Model for invoices"""
-    
-    STATUS_CHOICES = [
-        ('pending', 'Pending payment'),
-        ('paid', 'Paid'),
-        ('cancelled', 'Cancelled'),
-        ('expired', 'Expired')
-    ]
-    
-    user = models.ForeignKey('users.User', on_delete=models.CASCADE, related_name='invoices')
-    booking = models.ForeignKey('bookings.Booking', on_delete=models.CASCADE, 
-                                related_name='invoices', null=True, blank=True)
-    
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='payments')
     amount = models.DecimalField(max_digits=10, decimal_places=2)
-    description = models.TextField()
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
-    
-    # Payment deadline
-    due_date = models.DateTimeField()
-    
-    # Service information
+    payment_provider = models.CharField(max_length=20, choices=PAYMENT_PROVIDER_CHOICES)
+    provider_payment_id = models.CharField(max_length=255, blank=True, null=True)
+    status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='pending')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    payment = models.OneToOneField(Payment, on_delete=models.SET_NULL, 
-                                   null=True, blank=True, related_name='invoice')
     
     def __str__(self):
-        return f"Invoice {self.id} - {self.user.username} ({self.amount} RUB)"
+        return f"{self.user.username} - {self.amount} - {self.payment_provider} - {self.status}"
+
+class WayForPayPayment(models.Model):
+    """WayForPay payment details"""
+    payment = models.OneToOneField(Payment, on_delete=models.CASCADE, related_name='wayforpay_details')
+    wayforpay_order_id = models.CharField(max_length=255)
+    wayforpay_transaction_id = models.CharField(max_length=255, blank=True, null=True)
+    wayforpay_signature = models.TextField(blank=True, null=True)
+    wayforpay_status = models.CharField(max_length=50, blank=True, null=True)
+    
+    def __str__(self):
+        return f"WayForPay payment: {self.wayforpay_order_id}"
+
+class LiqPayPayment(models.Model):
+    """LiqPay payment details"""
+    payment = models.OneToOneField(Payment, on_delete=models.CASCADE, related_name='liqpay_details')
+    liqpay_order_id = models.CharField(max_length=255)
+    liqpay_signature = models.TextField(blank=True, null=True)
+    liqpay_data = models.TextField(blank=True, null=True)
+    
+    def __str__(self):
+        return f"LiqPay payment: {self.liqpay_order_id}"
+
+class PaymentTransaction(models.Model):
+    """Model to store transaction history"""
+    TRANSACTION_TYPE_CHOICES = (
+        ('deposit', _('Deposit')),
+        ('withdrawal', _('Withdrawal')),
+        ('refund', _('Refund')),
+        ('booking', _('Booking Fee')),
+    )
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='transactions')
+    payment = models.ForeignKey(Payment, on_delete=models.SET_NULL, null=True, blank=True, related_name='transactions')
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    transaction_type = models.CharField(max_length=20, choices=TRANSACTION_TYPE_CHOICES)
+    description = models.TextField(blank=True)
+    balance_after = models.DecimalField(max_digits=10, decimal_places=2)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.transaction_type} - {self.amount}"

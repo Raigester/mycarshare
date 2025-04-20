@@ -1,47 +1,36 @@
-from rest_framework import viewsets, permissions, filters, status
-from rest_framework.decorators import action
+from datetime import datetime
+import json
+import hashlib
+import base64
+import uuid
+import hmac
+from decimal import Decimal
+from django.conf import settings
+from django.shortcuts import get_object_or_404
+from django.http import HttpResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+from django.urls import reverse
+from rest_framework import viewsets, generics, permissions, status
+from rest_framework.views import APIView
 from rest_framework.response import Response
-from django_filters.rest_framework import DjangoFilterBackend
-from django.utils import timezone
-from datetime import timedelta
-from .models import Payment, Invoice
-from .serializers import PaymentSerializer, InvoiceSerializer, PaymentCreateSerializer
-from bookings.models import Booking
+from rest_framework.decorators import action
 
-class PaymentPermission(permissions.BasePermission):
-    """Custom permissions for payments"""
-    
-    def has_object_permission(self, request, view, obj):
-        # Admins have full access
-        if request.user.is_staff:
-            return True
-        
-        # Users have access only to their own payments
-        return obj.user == request.user
-
-class InvoicePermission(permissions.BasePermission):
-    """Custom permissions for invoices"""
-    
-    def has_object_permission(self, request, view, obj):
-        # Admins have full access
-        if request.user.is_staff:
-            return True
-        
-        # Users have access only to their own invoices
-        return obj.user == request.user
+from users.models import UserBalance
+from .models import Payment, WayForPayPayment, LiqPayPayment, PaymentTransaction
+from .serializers import (
+    PaymentSerializer, CreatePaymentSerializer, PaymentTransactionSerializer
+)
 
 class PaymentViewSet(viewsets.ModelViewSet):
-    """API for payments"""
+    """API endpoint for payments"""
     
     queryset = Payment.objects.all()
     serializer_class = PaymentSerializer
-    permission_classes = [permissions.IsAuthenticated, PaymentPermission]
-    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
-    filterset_fields = ['status', 'payment_type', 'booking']
-    ordering_fields = ['created_at', 'amount']
+    permission_classes = [permissions.IsAuthenticated]
     
     def get_queryset(self):
-        # Admins see all payments, users see only their own
+        # Users see only their own payments, admins see all
         user = self.request.user
         if not user.is_authenticated:
             return Payment.objects.none()
@@ -49,216 +38,394 @@ class PaymentViewSet(viewsets.ModelViewSet):
             return Payment.objects.all()
         return Payment.objects.filter(user=user)
     
-    def get_serializer_class(self):
-        if self.action == 'create':
-            return PaymentCreateSerializer
-        return PaymentSerializer
-    
-    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAdminUser])
-    def complete_payment(self, request, pk=None):
-        """Complete a payment (admin only)"""
-        payment = self.get_object()
+    def create(self, request):
+        """Create new payment"""
+        serializer = CreatePaymentSerializer(data=request.data)
         
-        # Check that the payment is pending
-        if payment.status != 'pending':
-            return Response(
-                {"error": "Only payments with 'Pending' status can be completed"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        # Update the payment
-        payment.status = 'completed'
-        payment.transaction_id = request.data.get('transaction_id', f'admin-{timezone.now().timestamp()}')
-        payment.save()
-        
-        # If there is an associated invoice, update its status
-        invoice = Invoice.objects.filter(payment=payment).first()
-        if invoice:
-            invoice.status = 'paid'
-            invoice.save()
-        
-        # If the payment is associated with a booking, update its status
-        booking = payment.booking
-        if booking and booking.status == 'pending' and payment.payment_type == 'booking':
-            booking.status = 'confirmed'
-            booking.save()
+        if serializer.is_valid():
+            amount = serializer.validated_data['amount']
+            provider = serializer.validated_data['payment_provider']
             
-            # Create a booking history record
-            from bookings.models import BookingHistory
-            BookingHistory.objects.create(
-                booking=booking,
-                status='confirmed',
-                notes=f"Booking confirmed after payment (payment ID: {payment.id})"
+            # Create the payment record
+            payment = Payment.objects.create(
+                user=request.user,
+                amount=amount,
+                payment_provider=provider,
+                status='pending'
             )
-        
-        return Response({"message": "Payment successfully completed"})
-    
-    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAdminUser])
-    def refund_payment(self, request, pk=None):
-        """Refund a payment (admin only)"""
-        payment = self.get_object()
-        
-        # Check if a refund is possible
-        if payment.status != 'completed':
+            
+            # Process payment based on provider
+            if provider == 'liqpay':
+                return self._create_liqpay_payment(payment, request)
+            elif provider == 'wayforpay':
+                return self._create_wayforpay_payment(payment, request)
+            
             return Response(
-                {"error": "Only completed payments can be refunded"},
+                {"error": "Unsupported payment provider"},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        # Create a new payment (refund)
-        refund = Payment.objects.create(
-            user=payment.user,
-            booking=payment.booking,
-            amount=payment.amount,
-            payment_type='refund',
-            status='completed',
-            payment_method=payment.payment_method,
-            transaction_id=f"refund-{payment.transaction_id}",
-            description=f"Refund for payment {payment.id}: {request.data.get('reason', 'No reason provided')}"
-        )
-        
-        # Update the original payment
-        payment.status = 'refunded'
-        payment.save()
-        
-        return Response({
-            "message": "Funds successfully refunded",
-            "refund_id": refund.id
-        })
-
-class InvoiceViewSet(viewsets.ModelViewSet):
-    """API for invoices"""
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
-    queryset = Invoice.objects.all()
-    serializer_class = InvoiceSerializer
-    permission_classes = [permissions.IsAuthenticated, InvoicePermission]
-    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
-    filterset_fields = ['status', 'booking']
-    ordering_fields = ['created_at', 'due_date', 'amount']
+    def _create_liqpay_payment(self, payment, request):
+        """Create a LiqPay payment"""
+        try:
+            # Generate unique order ID
+            order_id = f"order_{payment.id}_{payment.user.id}"
+            
+            # Prepare data for LiqPay
+            liqpay_data = {
+                'public_key': settings.LIQPAY_PUBLIC_KEY,
+                'version': '3',
+                'action': 'pay',
+                'amount': str(payment.amount),
+                'currency': 'UAH',
+                'description': 'CarShare Balance Top-up',
+                'order_id': order_id,
+                'result_url': request.build_absolute_uri(reverse('payment-success')),
+                'server_url': request.build_absolute_uri(reverse('liqpay-callback')),
+            }
+            
+            # Convert data to JSON and then to base64
+            data_json = json.dumps(liqpay_data)
+            data_base64 = base64.b64encode(data_json.encode('utf-8')).decode('utf-8')
+            
+            # Generate signature
+            signature_string = settings.LIQPAY_PRIVATE_KEY + data_base64 + settings.LIQPAY_PRIVATE_KEY
+            signature = base64.b64encode(hashlib.sha1(signature_string.encode('utf-8')).digest()).decode('utf-8')
+            
+            # Save LiqPay payment details
+            liqpay_payment = LiqPayPayment.objects.create(
+                payment=payment,
+                liqpay_order_id=order_id,
+                liqpay_data=data_base64,
+                liqpay_signature=signature
+            )
+            
+            return Response({
+                'payment_id': payment.id,
+                'liqpay_checkout_data': {
+                    'data': data_base64,
+                    'signature': signature
+                },
+                'liqpay_form_url': 'https://www.liqpay.ua/api/3/checkout'
+            })
+            
+        except Exception as e:
+            payment.status = 'failed'
+            payment.save()
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+    
+    def _create_wayforpay_payment(self, payment, request):
+        """Create a WayForPay payment"""
+        try:
+            # Generate unique order ID
+            order_id = f"CARSHARE-{payment.id}-{uuid.uuid4().hex[:8]}"
+            
+            # Current timestamp
+            order_date = int(payment.created_at.timestamp())
+            
+            # Prepare data for WayForPay
+            wayforpay_data = {
+                'merchantAccount': settings.WAYFORPAY_MERCHANT_ACCOUNT,
+                'merchantDomainName': settings.WAYFORPAY_MERCHANT_DOMAIN,
+                'merchantTransactionSecureType': 'AUTO',
+                'orderReference': order_id,
+                'orderDate': order_date,
+                'amount': str(payment.amount),
+                'currency': 'UAH',
+                'productName': ['CarShare Balance Top-up'],
+                'productPrice': [str(payment.amount)],
+                'productCount': [1],
+                'merchantTransactionType': 'CHARGE',
+                'returnUrl': request.build_absolute_uri(reverse('payment-success')),
+                'serviceUrl': request.build_absolute_uri(reverse('wayforpay-callback')),
+                'language': 'UA'
+            }
+            
+            # Add user info if available
+            user = payment.user
+            if user.email:
+                wayforpay_data['email'] = user.email
+            if user.phone_number:
+                wayforpay_data['phone'] = user.phone_number
+            if user.first_name and user.last_name:
+                wayforpay_data['clientName'] = f"{user.first_name} {user.last_name}"
+            
+            # Generate signature
+            signature_fields = [
+                wayforpay_data['merchantAccount'],
+                wayforpay_data['merchantDomainName'],
+                wayforpay_data['orderReference'],
+                str(wayforpay_data['orderDate']),
+                str(wayforpay_data['amount']),
+                wayforpay_data['currency'],
+                wayforpay_data['productName'][0],
+                str(wayforpay_data['productCount'][0]),
+                str(wayforpay_data['productPrice'][0])
+            ]
+            signature_str = ';'.join(signature_fields)
+            signature = hmac.new(
+                settings.WAYFORPAY_MERCHANT_SECRET.encode('utf-8'),
+                signature_str.encode('utf-8'),
+                hashlib.md5
+            ).hexdigest()
+            
+            wayforpay_data['merchantSignature'] = signature
+            
+            # Save WayForPay payment details
+            wayforpay_payment = WayForPayPayment.objects.create(
+                payment=payment,
+                wayforpay_order_id=order_id,
+                wayforpay_signature=signature
+            )
+            
+            return Response({
+                'payment_id': payment.id,
+                'wayforpay_checkout_data': wayforpay_data,
+                'wayforpay_form_url': 'https://secure.wayforpay.com/pay'
+            })
+            
+        except Exception as e:
+            payment.status = 'failed'
+            payment.save()
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+class PaymentTransactionViewSet(viewsets.ReadOnlyModelViewSet):
+    """API endpoint for payment transactions"""
+    
+    serializer_class = PaymentTransactionSerializer
+    permission_classes = [permissions.IsAuthenticated]
     
     def get_queryset(self):
-        # Admins see all invoices, users see only their own
+        # Users see only their own transactions, admins see all
         user = self.request.user
         if not user.is_authenticated:
-            return Invoice.objects.none()
+            return PaymentTransaction.objects.none()
         if user.is_staff:
-            return Invoice.objects.all()
-        return Invoice.objects.filter(user=user)
+            return PaymentTransaction.objects.all()
+        return PaymentTransaction.objects.filter(user=user)
+
+class PaymentSuccessView(APIView):
+    """Handle successful payments"""
     
-    @action(detail=True, methods=['post'])
-    def pay(self, request, pk=None):
-        """Pay an invoice"""
-        invoice = self.get_object()
-        
-        # Check if payment is possible
-        if invoice.status != 'pending':
-            return Response(
-                {"error": "Only invoices with 'Pending' status can be paid"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        if invoice.due_date < timezone.now():
-            return Response(
-                {"error": "The invoice payment deadline has passed"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        # Create a payment (here would be integration with a payment system)
-        payment_method = request.data.get('payment_method', 'card')
-        payment = Payment.objects.create(
-            user=invoice.user,
-            booking=invoice.booking,
-            amount=invoice.amount,
-            payment_type='booking' if invoice.booking else 'other',
-            status='pending',  # Initially pending, will be updated later
-            payment_method=payment_method,
-            description=f"Payment for invoice {invoice.id}: {invoice.description}"
-        )
-        
-        # Link the payment to the invoice
-        invoice.payment = payment
-        invoice.save()
-        
-        # In a real system, this would redirect to a payment gateway
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get(self, request):
+        # This view is called after user is redirected from payment gateway
+        # We just show a success message, actual payment processing 
+        # happens in webhook callbacks
         return Response({
-            "message": "Payment created, redirect the user to the payment gateway",
-            "payment_id": payment.id,
-            "amount": float(payment.amount),
-            "payment_method": payment_method
+            "message": "Payment was processed. If payment was successful, your balance will be updated shortly."
         })
+
+class PaymentCancelView(APIView):
+    """Handle cancelled payments"""
     
-    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAdminUser])
-    def cancel(self, request, pk=None):
-        """Cancel an invoice (admin only)"""
-        invoice = self.get_object()
-        
-        # Check if cancellation is possible
-        if invoice.status != 'pending':
-            return Response(
-                {"error": "Only invoices with 'Pending' status can be canceled"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        # Cancel the invoice
-        invoice.status = 'cancelled'
-        invoice.save()
-        
-        return Response({"message": "Invoice successfully canceled"})
+    permission_classes = [permissions.IsAuthenticated]
     
-    @action(detail=False, methods=['get'])
-    def overdue(self, request):
-        """Get overdue invoices"""
-        now = timezone.now()
-        
-        if request.user.is_staff:
-            invoices = Invoice.objects.filter(
-                status='pending',
-                due_date__lt=now
-            ).order_by('due_date')
-        else:
-            invoices = Invoice.objects.filter(
-                user=request.user,
-                status='pending',
-                due_date__lt=now
-            ).order_by('due_date')
-        
-        serializer = self.get_serializer(invoices, many=True)
-        return Response(serializer.data)
+    def get(self, request):
+        return Response({
+            "message": "Payment was cancelled",
+        })
+
+@method_decorator(csrf_exempt, name='dispatch')
+class LiqPayCallbackView(APIView):
+    """Handle LiqPay callbacks"""
     
-    @action(detail=False, methods=['post'], permission_classes=[permissions.IsAdminUser])
-    def create_booking_invoice(self, request):
-        """Create an invoice for a booking (admin only)"""
-        booking_id = request.data.get('booking_id')
+    permission_classes = [permissions.AllowAny]
+    
+    def post(self, request):
+        data = request.POST.get('data')
+        signature = request.POST.get('signature')
+        
+        if not data or not signature:
+            return HttpResponse(status=400)
         
         try:
-            booking = Booking.objects.get(id=booking_id)
-        except Booking.DoesNotExist:
-            return Response(
-                {"error": "Booking not found"},
-                status=status.HTTP_404_NOT_FOUND
-            )
+            # Verify signature
+            sign_string = settings.LIQPAY_PRIVATE_KEY + data + settings.LIQPAY_PRIVATE_KEY
+            calc_signature = base64.b64encode(hashlib.sha1(sign_string.encode('utf-8')).digest()).decode('utf-8')
+            
+            if calc_signature != signature:
+                return HttpResponse(status=400)
+            
+            # Decode data
+            decoded_data = json.loads(base64.b64decode(data).decode('utf-8'))
+            
+            # Process payment
+            if decoded_data.get('status') == 'success':
+                order_id = decoded_data.get('order_id')
+                
+                try:
+                    # Find payment by order ID
+                    liqpay_payment = LiqPayPayment.objects.get(liqpay_order_id=order_id)
+                    payment = liqpay_payment.payment
+                    
+                    # Skip if already processed
+                    if payment.status == 'completed':
+                        return HttpResponse(status=200)
+                    
+                    # Update payment status
+                    payment.status = 'completed'
+                    payment.provider_payment_id = decoded_data.get('payment_id', '')
+                    payment.save()
+                    
+                    # Update user balance
+                    self._update_user_balance(payment)
+                        
+                except LiqPayPayment.DoesNotExist:
+                    # Payment not found, log error
+                    print(f"LiqPay payment not found: {order_id}")
+            
+            return HttpResponse(status=200)
+            
+        except Exception as e:
+            # Other error
+            print(f"LiqPay callback error: {str(e)}")
+            return HttpResponse(status=500)
+    
+    def _update_user_balance(self, payment):
+        """Update user balance and create transaction record"""
+        user = payment.user
+        balance, created = UserBalance.objects.get_or_create(user=user)
+        balance.amount += payment.amount
+        balance.save()
         
-        # Check if there is already an invoice for this booking
-        existing_invoice = Invoice.objects.filter(
-            booking=booking,
-            status='pending'
-        ).first()
-        
-        if existing_invoice:
-            return Response(
-                {"error": "There is already an unpaid invoice for this booking"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        # Create an invoice with a due date 24 hours from now
-        due_date = timezone.now() + timedelta(hours=24)
-        invoice = Invoice.objects.create(
-            user=booking.user,
-            booking=booking,
-            amount=booking.total_price,
-            description=f"Payment for car booking {booking.car.model} from {booking.start_time} to {booking.end_time}",
-            due_date=due_date
+        # Create transaction record
+        PaymentTransaction.objects.create(
+            user=user,
+            payment=payment,
+            amount=payment.amount,
+            transaction_type='deposit',
+            description=f"Balance top-up via LiqPay",
+            balance_after=balance.amount
         )
+
+@method_decorator(csrf_exempt, name='dispatch')
+class WayForPayCallbackView(APIView):
+    """Handle WayForPay callbacks"""
+    
+    permission_classes = [permissions.AllowAny]
+    
+    def post(self, request):
+        try:
+            # Parse JSON data from request
+            data = json.loads(request.body.decode('utf-8'))
+            
+            # Validate the request
+            if 'orderReference' not in data or 'merchantSignature' not in data:
+                return HttpResponse(json.dumps({
+                    'orderReference': data.get('orderReference', ''),
+                    'status': 'failure',
+                    'time': int(datetime.now().timestamp())
+                }), content_type='application/json', status=400)
+            
+            # Verify signature
+            received_signature = data['merchantSignature']
+            order_reference = data['orderReference']
+            transaction_status = data.get('transactionStatus', '')
+            
+            # Find the payment
+            try:
+                from datetime import datetime
+                
+                wayforpay_payment = WayForPayPayment.objects.get(wayforpay_order_id=order_reference)
+                payment = wayforpay_payment.payment
+                
+                # Skip if already processed
+                if payment.status == 'completed':
+                    return self._generate_response(order_reference, 'success')
+                
+                # Check if the payment is approved
+                if transaction_status == 'Approved':
+                    # Calculate signature for validation
+                    signature_fields = [
+                        settings.WAYFORPAY_MERCHANT_ACCOUNT,
+                        order_reference,
+                        transaction_status
+                    ]
+                    signature_str = ';'.join(signature_fields)
+                    calculated_signature = hmac.new(
+                        settings.WAYFORPAY_MERCHANT_SECRET.encode('utf-8'),
+                        signature_str.encode('utf-8'),
+                        hashlib.md5
+                    ).hexdigest()
+                    
+                    if calculated_signature != received_signature:
+                        return self._generate_response(order_reference, 'failure')
+                    
+                    # Update payment details
+                    payment.status = 'completed'
+                    payment.provider_payment_id = data.get('orderReference', '')
+                    payment.save()
+                    
+                    # Update WayForPay payment details
+                    wayforpay_payment.wayforpay_transaction_id = data.get('transactionId', '')
+                    wayforpay_payment.wayforpay_status = transaction_status
+                    wayforpay_payment.save()
+                    
+                    # Update user balance
+                    self._update_user_balance(payment)
+                    
+                    return self._generate_response(order_reference, 'success')
+                
+                return self._generate_response(order_reference, 'failure')
+                
+            except WayForPayPayment.DoesNotExist:
+                return self._generate_response(order_reference, 'failure')
+            
+        except Exception as e:
+            print(f"WayForPay callback error: {str(e)}")
+            return HttpResponse(status=500)
+    
+    def _generate_response(self, order_reference, status):
+        """Generate response for WayForPay"""
+        response_data = {
+            'orderReference': order_reference,
+            'status': status,
+            'time': int(datetime.now().timestamp())
+        }
         
-        serializer = self.get_serializer(invoice)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        # Generate signature
+        signature_fields = [
+            settings.WAYFORPAY_MERCHANT_ACCOUNT,
+            order_reference,
+            status
+        ]
+        signature_str = ';'.join(signature_fields)
+        signature = hmac.new(
+            settings.WAYFORPAY_MERCHANT_SECRET.encode('utf-8'),
+            signature_str.encode('utf-8'),
+            hashlib.md5
+        ).hexdigest()
+        
+        response_data['merchantSignature'] = signature
+        
+        return HttpResponse(
+            json.dumps(response_data),
+            content_type='application/json'
+        )
+    
+    def _update_user_balance(self, payment):
+        """Update user balance and create transaction record"""
+        user = payment.user
+        balance, created = UserBalance.objects.get_or_create(user=user)
+        balance.amount += payment.amount
+        balance.save()
+        
+        # Create transaction record
+        PaymentTransaction.objects.create(
+            user=user,
+            payment=payment,
+            amount=payment.amount,
+            transaction_type='deposit',
+            description=f"Balance top-up via WayForPay",
+            balance_after=balance.amount
+        )
