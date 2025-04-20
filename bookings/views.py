@@ -188,16 +188,19 @@ class BookingViewSet(viewsets.ModelViewSet):
         
         # Create a new booking record
         now = timezone.now()
+        pickup_lat = request.data.get("latitude")
+        pickup_lng = request.data.get("longitude")
+
         booking = Booking.objects.create(
             user=user,
             car=car,
             start_time=now + timezone.timedelta(seconds=1),
-            end_time=now + timezone.timedelta(days=1),  # Temporarily set for one day
+            end_time=now + timezone.timedelta(days=1),
             status='active',
             last_billing_time=now,
             minutes_billed=0,
-            total_price=Decimal('0.00'),  # Initial amount
-            pickup_location=f"{car.current_latitude},{car.current_longitude}" if car.current_latitude else ""
+            total_price=Decimal('0.00'),
+            pickup_location=f"{pickup_lat},{pickup_lng}" if pickup_lat and pickup_lng else ""
         )
         
         # Create a history record
@@ -235,6 +238,11 @@ class BookingViewSet(viewsets.ModelViewSet):
         
         # End the rental
         now = timezone.now()
+        
+        return_lat = request.data.get("latitude")
+        return_lng = request.data.get("longitude")
+        if return_lat and return_lng:
+            booking.return_location = f"{return_lat},{return_lng}"
         
         # Calculate the last billing
         time_diff = now - booking.last_billing_time
