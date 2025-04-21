@@ -1,7 +1,9 @@
+from django.db import models
 from rest_framework import viewsets, permissions, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.exceptions import ValidationError
 from .models import CarBrand, CarModel, Car, CarPhoto, CarReview
 from .serializers import (
     CarBrandSerializer, CarModelSerializer, CarSerializer, 
@@ -183,10 +185,17 @@ class CarReviewViewSet(viewsets.ModelViewSet):
     filterset_fields = ['car', 'user', 'rating']
     
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        car = serializer.validated_data['car']
+        user = self.request.user
+        
+        # Check for an existing review
+        if CarReview.objects.filter(car=car, user=user).exists():
+            raise ValidationError({"detail": "You have already reviewed this car."})
+        
+        # Save the new review
+        serializer.save(user=user)
         
         # Recalculate the car's average rating
-        car = serializer.validated_data['car']
         reviews = CarReview.objects.filter(car=car)
         avg_rating = reviews.aggregate(models.Avg('rating'))['rating__avg']
         car.rating = avg_rating

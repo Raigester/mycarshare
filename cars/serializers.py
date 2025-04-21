@@ -31,7 +31,7 @@ class CarReviewSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = CarReview
-        fields = ('id', 'user', 'user_username', 'rating', 'comment', 'created_at')
+        fields = ('id', 'user', 'user_username', 'car', 'rating', 'comment', 'created_at')
         read_only_fields = ('user', 'created_at')
 
 class CarSerializer(serializers.ModelSerializer):

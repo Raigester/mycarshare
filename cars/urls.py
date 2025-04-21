@@ -6,9 +6,9 @@ from .views import (
 )
 
 router = DefaultRouter()
+router.register(r'cars', CarViewSet)
 router.register(r'brands', CarBrandViewSet)
 router.register(r'models', CarModelViewSet)
-router.register(r'', CarViewSet)
 router.register(r'photos', CarPhotoViewSet)
 router.register(r'reviews', CarReviewViewSet)
 
