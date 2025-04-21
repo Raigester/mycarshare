@@ -16,6 +16,24 @@ class CarBrandViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
     filter_backends = [filters.SearchFilter]
     search_fields = ['name']
+    
+    def create(self, request, *args, **kwargs):
+        """Restrict brand creation to admins only"""
+        if not request.user.is_staff:
+            return Response({"error": "Only administrators can add car brands."}, status=status.HTTP_403_FORBIDDEN)
+        return super().create(request, *args, **kwargs)
+    
+    def update(self, request, *args, **kwargs):
+        """Restrict brand editing to admins only"""
+        if not request.user.is_staff:
+            return Response({"error": "Only administrators can edit car brands."}, status=status.HTTP_403_FORBIDDEN)
+        return super().update(request, *args, **kwargs)
+    
+    def destroy(self, request, *args, **kwargs):
+        """Restrict brand deletion to admins only"""
+        if not request.user.is_staff:
+            return Response({"error": "Only administrators can delete car brands."}, status=status.HTTP_403_FORBIDDEN)
+        return super().destroy(request, *args, **kwargs)
 
 class CarModelViewSet(viewsets.ModelViewSet):
     """API for car models"""
@@ -26,6 +44,24 @@ class CarModelViewSet(viewsets.ModelViewSet):
     filter_backends = [filters.SearchFilter, DjangoFilterBackend]
     search_fields = ['name']
     filterset_fields = ['brand']
+    
+    def create(self, request, *args, **kwargs):
+        """Restrict model creation to admins only"""
+        if not request.user.is_staff:
+            return Response({"error": "Only administrators can add car models."}, status=status.HTTP_403_FORBIDDEN)
+        return super().create(request, *args, **kwargs)
+    
+    def update(self, request, *args, **kwargs):
+        """Restrict model editing to admins only"""
+        if not request.user.is_staff:
+            return Response({"error": "Only administrators can edit car models."}, status=status.HTTP_403_FORBIDDEN)
+        return super().update(request, *args, **kwargs)
+    
+    def destroy(self, request, *args, **kwargs):
+        """Restrict model deletion to admins only"""
+        if not request.user.is_staff:
+            return Response({"error": "Only administrators can delete car models."}, status=status.HTTP_403_FORBIDDEN)
+        return super().destroy(request, *args, **kwargs)
 
 class CarViewSet(viewsets.ModelViewSet):
     """API for cars"""
@@ -54,6 +90,24 @@ class CarViewSet(viewsets.ModelViewSet):
         if self.action == 'retrieve':
             return CarDetailSerializer
         return CarSerializer
+    
+    def create(self, request, *args, **kwargs):
+        """Restrict car creation to admins only"""
+        if not request.user.is_staff:
+            return Response({"error": "Only administrators can add cars."}, status=status.HTTP_403_FORBIDDEN)
+        return super().create(request, *args, **kwargs)
+    
+    def update(self, request, *args, **kwargs):
+        """Restrict car editing to admins only"""
+        if not request.user.is_staff:
+            return Response({"error": "Only administrators can edit cars."}, status=status.HTTP_403_FORBIDDEN)
+        return super().update(request, *args, **kwargs)
+    
+    def destroy(self, request, *args, **kwargs):
+        """Restrict car deletion to admins only"""
+        if not request.user.is_staff:
+            return Response({"error": "Only administrators can delete cars."}, status=status.HTTP_403_FORBIDDEN)
+        return super().destroy(request, *args, **kwargs)
     
     @action(detail=True, methods=['post'], permission_classes=[permissions.IsAdminUser])
     def change_status(self, request, pk=None):
@@ -100,6 +154,24 @@ class CarPhotoViewSet(viewsets.ModelViewSet):
         if car_id:
             return CarPhoto.objects.filter(car_id=car_id)
         return super().get_queryset()
+    
+    def create(self, request, *args, **kwargs):
+        """Restrict photo creation to admins only"""
+        if not request.user.is_staff:
+            return Response({"error": "Only administrators can add car photos."}, status=status.HTTP_403_FORBIDDEN)
+        return super().create(request, *args, **kwargs)
+    
+    def update(self, request, *args, **kwargs):
+        """Restrict photo editing to admins only"""
+        if not request.user.is_staff:
+            return Response({"error": "Only administrators can edit car photos."}, status=status.HTTP_403_FORBIDDEN)
+        return super().update(request, *args, **kwargs)
+    
+    def destroy(self, request, *args, **kwargs):
+        """Restrict photo deletion to admins only"""
+        if not request.user.is_staff:
+            return Response({"error": "Only administrators can delete car photos."}, status=status.HTTP_403_FORBIDDEN)
+        return super().destroy(request, *args, **kwargs)
 
 class CarReviewViewSet(viewsets.ModelViewSet):
     """API for car reviews"""
