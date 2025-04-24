@@ -68,24 +68,24 @@ TEMPLATES = [
 WSGI_APPLICATION = 'carsharing.wsgi.application'
 
 # Database
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db.sqlite3',
-#     }
-# }
-
-# # For production, it is recommended to use PostgreSQL
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config('DB_NAME'),
-        'USER': config('DB_USER'),
-        'PASSWORD': config('DB_PASSWORD'),
-        'HOST': config('DB_HOST'),
-        'PORT': config('DB_PORT'),
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
+
+# # For production, it is recommended to use PostgreSQL
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': config('DB_NAME'),
+#         'USER': config('DB_USER'),
+#         'PASSWORD': config('DB_PASSWORD'),
+#         'HOST': config('DB_HOST'),
+#         'PORT': config('DB_PORT'),
+#     }
+# }
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
@@ -176,11 +176,6 @@ CELERY_TIMEZONE = 'UTC'
 # LiqPay Configuration
 LIQPAY_PUBLIC_KEY = config('LIQPAY_PUBLIC_KEY')
 LIQPAY_PRIVATE_KEY = config('LIQPAY_PRIVATE_KEY')
-
-# WayForPay Configuration
-WAYFORPAY_MERCHANT_ACCOUNT = config('WAYFORPAY_MERCHANT_ACCOUNT')
-WAYFORPAY_MERCHANT_SECRET = config('WAYFORPAY_MERCHANT_SECRET')
-WAYFORPAY_MERCHANT_DOMAIN = config('WAYFORPAY_MERCHANT_DOMAIN')
 
 # Payment Settings
 MIN_PAYMENT_AMOUNT = '10.00'  # Minimum deposit amount
