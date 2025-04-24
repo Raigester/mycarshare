@@ -57,8 +57,6 @@ class PaymentViewSet(viewsets.ModelViewSet):
             # Process payment based on provider
             if provider == 'liqpay':
                 return self._create_liqpay_payment(payment, request)
-            elif provider == 'wayforpay':
-                return self._create_wayforpay_payment(payment, request)
             
             return Response(
                 {"error": "Unsupported payment provider"},

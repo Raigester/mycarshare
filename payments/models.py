@@ -17,7 +17,6 @@ class Payment(models.Model):
     
     PAYMENT_PROVIDER_CHOICES = (
         ('liqpay', _('LiqPay')),
-        ('wayforpay', _('WayForPay')),
     )
     
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='payments')
