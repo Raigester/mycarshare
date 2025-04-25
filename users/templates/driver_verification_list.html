@@ -30,9 +30,9 @@
                                 {% if verification.status == 'pending' %}
                                     <span class="badge bg-warning text-dark verification-status-pending">На розгляді</span>
                                 {% elif verification.status == 'approved' %}
-                                    <span class="badge bg-success verification-status-approved">Схвалено</span>
+                                    <span class="badge bg-success text-dark verification-status-approved">Схвалено</span>
                                 {% elif verification.status == 'rejected' %}
-                                    <span class="badge bg-danger verification-status-rejected">Відхилено</span>
+                                    <span class="badge bg-danger text-dark verification-status-rejected">Відхилено</span>
                                 {% endif %}
                             </td>
                             <td>{{ verification.updated_at|date:"d.m.Y H:i" }}</td>
