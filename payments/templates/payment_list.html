@@ -1,0 +1,182 @@
+{% extends 'base.html' %}
+
+{% block title %}Історія платежів - MyCarShare{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <h2 class="mb-4">Історія платежів</h2>
+    
+    <div class="row mb-4">
+        <div class="col-md-6 mb-3 mb-md-0">
+            <div class="card h-100">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Статистика платежів</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <p><strong>Усього платежів:</strong> {{ total_payments }}</p>
+                            <p><strong>Успішних платежів:</strong> {{ total_successful }}</p>
+                            <p><strong>Загальна сума:</strong> {{ total_amount|floatformat:2 }} ₴</p>
+                        </div>
+                        <div class="col-6">
+                            <p><strong>За останні 30 днів:</strong></p>
+                            <p><strong>Платежів:</strong> {{ recent_payments }}</p>
+                            <p><strong>На суму:</strong> {{ recent_amount|floatformat:2 }} ₴</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Дії</h4>
+                </div>
+                <div class="card-body d-flex flex-column justify-content-between">
+                    <p>Керуйте своїми платежами та поповнюйте баланс</p>
+                    <div class="d-flex flex-wrap gap-2">
+                        <a href="{% url 'create-payment' %}" class="btn btn-success">Поповнити баланс</a>
+                        <a href="{% url 'transaction-list' %}" class="btn btn-info">Історія транзакцій</a>
+                        <a href="{% url 'balance' %}" class="btn btn-outline-primary">Переглянути баланс</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h4 class="mb-0">Фільтр платежів</h4>
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label for="{{ filter_form.status.id_for_label }}" class="form-label">Статус</label>
+                    {{ filter_form.status }}
+                </div>
+                <div class="col-md-3">
+                    <label for="{{ filter_form.payment_provider.id_for_label }}" class="form-label">Провайдер</label>
+                    {{ filter_form.payment_provider }}
+                </div>
+                <div class="col-md-3">
+                    <label for="{{ filter_form.date_from.id_for_label }}" class="form-label">Дата з</label>
+                    {{ filter_form.date_from }}
+                </div>
+                <div class="col-md-3">
+                    <label for="{{ filter_form.date_to.id_for_label }}" class="form-label">Дата по</label>
+                    {{ filter_form.date_to }}
+                </div>
+                <div class="col-12 mt-3">
+                    <button type="submit" class="btn btn-primary">Застосувати фільтр</button>
+                    <a href="{% url 'payment-list' %}" class="btn btn-outline-secondary">Скинути</a>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    {% if payments %}
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Дата</th>
+                        <th>Сума</th>
+                        <th>Провайдер</th>
+                        <th>Статус</th>
+                        <th>Дії</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for payment in payments %}
+                        <tr>
+                            <td>{{ payment.id }}</td>
+                            <td>{{ payment.created_at|date:"d.m.Y H:i" }}</td>
+                            <td>{{ payment.amount|floatformat:2 }} ₴</td>
+                            <td>
+                                {% if payment.payment_provider == 'liqpay' %}
+                                    LiqPay
+                                {% else %}
+                                    {{ payment.payment_provider }}
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if payment.status == 'pending' %}
+                                    <span class="badge bg-warning text-dark">Очікує</span>
+                                {% elif payment.status == 'completed' %}
+                                    <span class="badge bg-success">Виконано</span>
+                                {% elif payment.status == 'failed' %}
+                                    <span class="badge bg-danger">Помилка</span>
+                                {% elif payment.status == 'cancelled' %}
+                                    <span class="badge bg-secondary">Скасовано</span>
+                                {% elif payment.status == 'refunded' %}
+                                    <span class="badge bg-info">Повернено</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'payment-detail' payment.id %}" class="btn btn-sm btn-outline-primary">Деталі</a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        {% if is_paginated %}
+            <nav aria-label="Page navigation" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">&laquo; Перша</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">Попередня</a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">&laquo; Перша</span>
+                        </li>
+                        <li class="page-item disabled">
+                            <span class="page-link">Попередня</span>
+                        </li>
+                    {% endif %}
+                    
+                    {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ num }}</span>
+                            </li>
+                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ num }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ num }}</a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">Наступна</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">Остання &raquo;</a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">Наступна</span>
+                        </li>
+                        <li class="page-item disabled">
+                            <span class="page-link">Остання &raquo;</span>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        {% endif %}
+    {% else %}
+        <div class="alert alert-info">
+            У вас ще немає платежів. <a href="{% url 'create-payment' %}" class="alert-link">Поповнити баланс</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

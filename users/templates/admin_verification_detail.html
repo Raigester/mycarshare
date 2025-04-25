@@ -1,0 +1,145 @@
+{% extends 'base.html' %}
+
+{% block title %}Деталі верифікації - MyCarShare{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <h2 class="mb-4">Деталі заявки на верифікацію водія</h2>
+
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h4 class="card-title mb-0">Інформація про користувача</h4>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Користувач:</strong> {{ object.user.username }}</p>
+                    <p><strong>Повне ім'я:</strong> {{ object.user.get_full_name|default:"Не вказано" }}</p>
+                    <p><strong>Email:</strong> {{ object.user.email }}</p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Телефон:</strong> {{ object.user.phone_number|default:"Не вказано" }}</p>
+                    <p><strong>Дата народження:</strong> {{ object.user.date_of_birth|date:"d.m.Y"|default:"Не вказано" }}</p>
+                    <p><strong>Дата реєстрації:</strong> {{ object.user.date_joined|date:"d.m.Y" }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h4 class="card-title mb-0">Інформація про заявку</h4>
+        </div>
+        <div class="card-body">
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <p><strong>Статус:</strong>
+                        {% if object.status == 'pending' %}
+                            <span class="badge bg-warning text-dark">На розгляді</span>
+                        {% elif object.status == 'approved' %}
+                            <span class="badge bg-success">Схвалено</span>
+                        {% elif object.status == 'rejected' %}
+                            <span class="badge bg-danger">Відхилено</span>
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="col-md-4">
+                    <p><strong>Створено:</strong> {{ object.created_at|date:"d.m.Y H:i" }}</p>
+                </div>
+                <div class="col-md-4">
+                    <p><strong>Оновлено:</strong> {{ object.updated_at|date:"d.m.Y H:i" }}</p>
+                </div>
+            </div>
+
+            {% if object.comment %}
+                <div class="alert alert-info">
+                    <strong>Коментар:</strong> {{ object.comment }}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5>Лицьова сторона</h5>
+                </div>
+                <div class="card-body text-center">
+                    <img src="{{ object.front_image.url }}" class="img-fluid img-thumbnail" alt="Лицьова сторона прав">
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5>Зворотня сторона</h5>
+                </div>
+                <div class="card-body text-center">
+                    <img src="{{ object.back_image.url }}" class="img-fluid img-thumbnail" alt="Зворотня сторона прав">
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5>Селфі з правами</h5>
+                </div>
+                <div class="card-body text-center">
+                    <img src="{{ object.selfie_with_license.url }}" class="img-fluid img-thumbnail" alt="Селфі з правами">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if object.status == 'pending' %}
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h4 class="card-title mb-0">Рішення по заявці</h4>
+        </div>
+        <div class="card-body">
+            <form method="post" novalidate>
+                {% csrf_token %}
+                {{ form.non_field_errors }}
+
+                <div class="mb-3">
+                    {{ form.comment.label_tag }}
+                    {{ form.comment }}
+                    {% if form.comment.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.comment.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    <div class="form-text">Коментар до рішення (обов'язково при відхиленні)</div>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2">
+                    <button type="submit" name="{{ form.status.name }}" value="pending" class="btn btn-warning text-dark">Повернути на розгляд</button>
+                    <button type="submit" name="{{ form.status.name }}" value="rejected" class="btn btn-danger">Відхилити</button>
+                    <button type="submit" name="{{ form.status.name }}" value="approved" class="btn btn-primary">Схвалити</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% else %}
+    <div class="d-flex justify-content-between">
+        <a href="{% url 'admin-verification-list' %}" class="btn btn-outline-secondary">Повернутися до списку</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.img-thumbnail').forEach(function(img) {
+        img.addEventListener('click', function() {
+            window.open(this.src, '_blank');
+        });
+        img.style.cursor = 'pointer';
+    });
+});
+</script>
+{% endblock %}

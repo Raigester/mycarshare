@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+
+{% block title %}Адміністрування верифікацій - MyCarShare{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <h2 class="mb-4">Управління верифікацією водіїв</h2>
+    
+    <nav>
+        <div class="nav nav-tabs mb-4" id="nav-tab" role="tablist">
+            <button class="nav-link active" id="nav-pending-tab" data-bs-toggle="tab" data-bs-target="#nav-pending" type="button" role="tab">
+                Очікують <span class="badge bg-warning text-dark">{{ pending_verifications|length }}</span>
+            </button>
+            <button class="nav-link" id="nav-approved-tab" data-bs-toggle="tab" data-bs-target="#nav-approved" type="button" role="tab">
+                Схвалені
+            </button>
+            <button class="nav-link" id="nav-rejected-tab" data-bs-toggle="tab" data-bs-target="#nav-rejected" type="button" role="tab">
+                Відхилені
+            </button>
+        </div>
+    </nav>
+    
+    <div class="tab-content" id="nav-tabContent">
+        <div class="tab-pane fade show active" id="nav-pending" role="tabpanel">
+            {% if pending_verifications %}
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Користувач</th>
+                                <th>Дата створення</th>
+                                <th>Статус</th>
+                                <th>Дії</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for verification in pending_verifications %}
+                                <tr>
+                                    <td>{{ verification.user.username }}</td>
+                                    <td>{{ verification.created_at|date:"d.m.Y H:i" }}</td>
+                                    <td>
+                                        <span class="badge bg-warning text-dark verification-status-pending">На розгляді</span>
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'admin-verification-detail' verification.id %}" class="btn btn-sm btn-primary">Розглянути</a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="alert alert-info">
+                    Немає заявок на верифікацію водіїв, що очікують розгляду.
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="tab-pane fade" id="nav-approved" role="tabpanel">
+            {% if approved_verifications %}
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Користувач</th>
+                                <th>Дата створення</th>
+                                <th>Дата схвалення</th>
+                                <th>Дії</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for verification in approved_verifications %}
+                                <tr>
+                                    <td>{{ verification.user.username }}</td>
+                                    <td>{{ verification.created_at|date:"d.m.Y H:i" }}</td>
+                                    <td>{{ verification.updated_at|date:"d.m.Y H:i" }}</td>
+                                    <td>
+                                        <a href="{% url 'admin-verification-detail' verification.id %}" class="btn btn-sm btn-info">Переглянути</a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="alert alert-info">
+                    Немає схвалених заявок на верифікацію водіїв.
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="tab-pane fade" id="nav-rejected" role="tabpanel">
+            {% if rejected_verifications %}
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Користувач</th>
+                                <th>Дата створення</th>
+                                <th>Дата відхилення</th>
+                                <th>Коментар</th>
+                                <th>Дії</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for verification in rejected_verifications %}
+                                <tr>
+                                    <td>{{ verification.user.username }}</td>
+                                    <td>{{ verification.created_at|date:"d.m.Y H:i" }}</td>
+                                    <td>{{ verification.updated_at|date:"d.m.Y H:i" }}</td>
+                                    <td>{{ verification.comment|default:"-" }}</td>
+                                    <td>
+                                        <a href="{% url 'admin-verification-detail' verification.id %}" class="btn btn-sm btn-info">Переглянути</a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="alert alert-info">
+                    Немає відхилених заявок на верифікацію водіїв.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

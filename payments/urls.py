@@ -1,17 +1,18 @@
-from django.urls import path, include
-from rest_framework.routers import DefaultRouter
-from .views import (
-    PaymentViewSet, PaymentTransactionViewSet, PaymentSuccessView,
-    PaymentCancelView, LiqPayCallbackView
-)
-
-router = DefaultRouter()
-router.register(r'payments', PaymentViewSet, basename='payment')
-router.register(r'transactions', PaymentTransactionViewSet, basename='transaction')
+from django.urls import path
+from . import views
 
 urlpatterns = [
-    path('', include(router.urls)),
-    path('success/', PaymentSuccessView.as_view(), name='payment-success'),
-    path('cancel/', PaymentCancelView.as_view(), name='payment-cancel'),
-    path('webhook/liqpay/', LiqPayCallbackView.as_view(), name='liqpay-callback'),
+    # Payment views
+    path('', views.PaymentListView.as_view(), name='payment-list'),
+    path('<int:pk>/', views.PaymentDetailView.as_view(), name='payment-detail'),
+    path('create/', views.CreatePaymentView.as_view(), name='create-payment'),
+    path('process/', views.ProcessPaymentView.as_view(), name='payment-process'),
+    path('success/', views.PaymentSuccessView.as_view(), name='payment-success'),
+    path('cancel/', views.PaymentCancelView.as_view(), name='payment-cancel'),
+    
+    # Transaction views
+    path('transactions/', views.TransactionListView.as_view(), name='transaction-list'),
+    
+    # Webhook callback
+    path('webhook/liqpay/', views.LiqPayCallbackView.as_view(), name='liqpay-callback'),
 ]

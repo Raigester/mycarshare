@@ -1,0 +1,125 @@
+{% extends 'base.html' %}
+
+{% block title %}Підтвердження водійських прав - MyCarShare{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <h2 class="mb-4">Підтвердження водійських прав</h2>
+    <p class="lead mb-4">Завантажте фотографії ваших водійських прав для верифікації</p>
+    
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5>Вимоги до фотографій:</h5>
+            <ul>
+                <li>Фотографії повинні бути чіткими та добре освітленими</li>
+                <li>Уся інформація на правах повинна бути добре видимою</li>
+                <li>На селфі ви повинні тримати водійське посвідчення поруч із обличчям</li>
+                <li>Фотографії не повинні бути обрізаними або відредагованими</li>
+            </ul>
+        </div>
+    </div>
+    
+    <form method="post" enctype="multipart/form-data" novalidate>
+        {% csrf_token %}
+        
+        {% if form.non_field_errors %}
+            <div class="alert alert-danger">
+                {% for error in form.non_field_errors %}
+                    {{ error }}
+                {% endfor %}
+            </div>
+        {% endif %}
+        
+        <div class="row mb-4">
+            <div class="col-md-6 mb-3">
+                <label for="{{ form.front_image.id_for_label }}" class="form-label">Фото лицьової сторони прав*</label>
+                <input type="file" class="form-control {% if form.front_image.errors %}is-invalid{% endif %}" 
+                       id="{{ form.front_image.id_for_label }}" name="{{ form.front_image.name }}">
+                {% if form.front_image.errors %}
+                    <div class="invalid-feedback">
+                        {% for error in form.front_image.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                <div class="form-text">Завантажте фото лицьової сторони водійського посвідчення</div>
+                <div class="mt-2">
+                    <img id="front-preview" src="#" alt="Попередній перегляд" style="max-width: 100%; display: none;">
+                </div>
+            </div>
+            
+            <div class="col-md-6 mb-3">
+                <label for="{{ form.back_image.id_for_label }}" class="form-label">Фото зворотньої сторони прав*</label>
+                <input type="file" class="form-control {% if form.back_image.errors %}is-invalid{% endif %}" 
+                       id="{{ form.back_image.id_for_label }}" name="{{ form.back_image.name }}">
+                {% if form.back_image.errors %}
+                    <div class="invalid-feedback">
+                        {% for error in form.back_image.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                <div class="form-text">Завантажте фото зворотньої сторони водійського посвідчення</div>
+                <div class="mt-2">
+                    <img id="back-preview" src="#" alt="Попередній перегляд" style="max-width: 100%; display: none;">
+                </div>
+            </div>
+        </div>
+        
+        <div class="mb-4">
+            <label for="{{ form.selfie_with_license.id_for_label }}" class="form-label">Селфі з водійським посвідченням*</label>
+            <input type="file" class="form-control {% if form.selfie_with_license.errors %}is-invalid{% endif %}" 
+                   id="{{ form.selfie_with_license.id_for_label }}" name="{{ form.selfie_with_license.name }}">
+            {% if form.selfie_with_license.errors %}
+                <div class="invalid-feedback">
+                    {% for error in form.selfie_with_license.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+            <div class="form-text">Завантажте фото, де ви тримаєте свої права поруч із обличчям</div>
+            <div class="mt-2">
+                <img id="selfie-preview" src="#" alt="Попередній перегляд" style="max-width: 100%; display: none;">
+            </div>
+        </div>
+        
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> Після відправки запит буде розглянутий адміністратором протягом 24 годин.
+        </div>
+        
+        <div class="d-flex justify-content-between">
+            <button type="submit" class="btn btn-primary">Відправити на перевірку</button>
+            <a href="{% url 'profile' %}" class="btn btn-outline-secondary">Скасувати</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Попередній перегляд завантажуваних зображень
+    document.addEventListener('DOMContentLoaded', function() {
+        function setupImagePreview(inputId, previewId) {
+            const input = document.getElementById(inputId);
+            const preview = document.getElementById(previewId);
+            
+            input.addEventListener('change', function() {
+                if (input.files && input.files[0]) {
+                    const reader = new FileReader();
+                    
+                    reader.onload = function(e) {
+                        preview.src = e.target.result;
+                        preview.style.display = 'block';
+                    }
+                    
+                    reader.readAsDataURL(input.files[0]);
+                }
+            });
+        }
+        
+        setupImagePreview('{{ form.front_image.id_for_label }}', 'front-preview');
+        setupImagePreview('{{ form.back_image.id_for_label }}', 'back-preview');
+        setupImagePreview('{{ form.selfie_with_license.id_for_label }}', 'selfie-preview');
+    });
+</script>
+{% endblock %}

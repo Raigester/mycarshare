@@ -1,23 +1,25 @@
-from django.urls import path, include
-from rest_framework.routers import DefaultRouter
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from .views import (
-    UserBalanceView, UserRegistrationView, UserProfileView, ChangePasswordView,
-    DriverLicenseVerificationViewSet
-)
-
-router = DefaultRouter()
-router.register(r'license-verification', DriverLicenseVerificationViewSet)
+from django.urls import path
+from django.contrib.auth import views as auth_views
+from . import views
 
 urlpatterns = [
-    path('register/', UserRegistrationView.as_view(), name='register'),
-    path('profile/', UserProfileView.as_view(), name='profile'),
-    path('change-password/', ChangePasswordView.as_view(), name='change-password'),
-    path('', include(router.urls)),
+    # Authentication
+    path('login/', auth_views.LoginView.as_view(template_name='login.html'), name='login'),
+    path('logout/', auth_views.LogoutView.as_view(template_name='logout.html'), name='logout'),
+    path('register/', views.UserRegistrationView.as_view(), name='register'),
     
-    # JWT authentication
-    path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    # For balance management
-    path('balance/add/', UserBalanceView.as_view(), name='add-balance'),
+    # User profile
+    path('profile/', views.UserProfileView.as_view(), name='profile'),
+    path('change-password/', views.change_password_view, name='change-password'),
+    
+    # Driver verification
+    path('verification/new/', views.DriverLicenseVerificationCreateView.as_view(), name='verification-create'),
+    path('verification/list/', views.DriverLicenseVerificationListView.as_view(), name='verification-list'),
+    
+    # Admin verification pages
+    path('admin/verifications/', views.AdminVerificationListView.as_view(), name='admin-verification-list'),
+    path('admin/verification/<int:pk>/', views.AdminVerificationUpdateView.as_view(), name='admin-verification-detail'),
+    
+    # Balance management
+    path('balance/', views.user_balance_view, name='balance'),
 ]

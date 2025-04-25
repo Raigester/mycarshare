@@ -1,0 +1,135 @@
+{% extends 'base.html' %}
+
+{% block title %}Деталі платежу - MyCarShare{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <h2 class="mb-4">Деталі платежу #{{ payment.id }}</h2>
+    
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h4 class="mb-0">Інформація про платіж</h4>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Номер платежу:</strong> {{ payment.id }}</p>
+                    <p><strong>Дата створення:</strong> {{ payment.created_at|date:"d.m.Y H:i" }}</p>
+                    <p><strong>Останнє оновлення:</strong> {{ payment.updated_at|date:"d.m.Y H:i" }}</p>
+                    <p><strong>Користувач:</strong> {{ payment.user.username }}</p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Сума:</strong> {{ payment.amount|floatformat:2 }} ₴</p>
+                    <p><strong>Платіжна система:</strong> 
+                        {% if payment.payment_provider == 'liqpay' %}
+                            LiqPay
+                        {% else %}
+                            {{ payment.payment_provider }}
+                        {% endif %}
+                    </p>
+                    <p><strong>Ідентифікатор у платіжній системі:</strong> 
+                        {% if payment.provider_payment_id %}
+                            {{ payment.provider_payment_id }}
+                        {% else %}
+                            <span class="text-muted">Немає даних</span>
+                        {% endif %}
+                    </p>
+                    <p><strong>Статус:</strong> 
+                        {% if payment.status == 'pending' %}
+                            <span class="badge bg-warning text-dark">Очікує</span>
+                        {% elif payment.status == 'completed' %}
+                            <span class="badge bg-success">Виконано</span>
+                        {% elif payment.status == 'failed' %}
+                            <span class="badge bg-danger">Помилка</span>
+                        {% elif payment.status == 'cancelled' %}
+                            <span class="badge bg-secondary">Скасовано</span>
+                        {% elif payment.status == 'refunded' %}
+                            <span class="badge bg-info">Повернено</span>
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    {% if payment.liqpay_details %}
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h4 class="mb-0">Деталі LiqPay</h4>
+        </div>
+        <div class="card-body">
+            <p><strong>ID замовлення в LiqPay:</strong> {{ payment.liqpay_details.liqpay_order_id }}</p>
+            {% if payment.status == 'pending' %}
+                <div class="alert alert-warning">
+                    <p><strong>Платіж очікує оплати</strong></p>
+                    <p>Якщо ви почали процес оплати, але не завершили його, ви можете продовжити.</p>
+                    <form action="https://www.liqpay.ua/api/3/checkout" method="POST" target="_blank">
+                        <input type="hidden" name="data" value="{{ payment.liqpay_details.liqpay_data }}" />
+                        <input type="hidden" name="signature" value="{{ payment.liqpay_details.liqpay_signature }}" />
+                        <button type="submit" class="btn btn-warning">Продовжити оплату</button>
+                    </form>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+    
+    {% if transactions %}
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h4 class="mb-0">Пов'язані транзакції</h4>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Дата</th>
+                            <th>Тип</th>
+                            <th>Сума</th>
+                            <th>Баланс після</th>
+                            <th>Опис</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for transaction in payment.transactions.all %}
+                            <tr>
+                                <td>{{ transaction.id }}</td>
+                                <td>{{ transaction.created_at|date:"d.m.Y H:i" }}</td>
+                                <td>
+                                    {% if transaction.transaction_type == 'deposit' %}
+                                        <span class="badge bg-success">Поповнення</span>
+                                    {% elif transaction.transaction_type == 'withdrawal' %}
+                                        <span class="badge bg-danger">Списання</span>
+                                    {% elif transaction.transaction_type == 'refund' %}
+                                        <span class="badge bg-info">Повернення</span>
+                                    {% elif transaction.transaction_type == 'booking' %}
+                                        <span class="badge bg-primary">Бронювання</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ transaction.amount|floatformat:2 }} ₴</td>
+                                <td>{{ transaction.balance_after|floatformat:2 }} ₴</td>
+                                <td>{{ transaction.description }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <div class="d-flex justify-content-between">
+        <a href="{% url 'payment-list' %}" class="btn btn-outline-secondary">Назад до списку платежів</a>
+        
+        {% if payment.status == 'pending' and payment.liqpay_details %}
+            <form action="https://www.liqpay.ua/api/3/checkout" method="POST" target="_blank">
+                <input type="hidden" name="data" value="{{ payment.liqpay_details.liqpay_data }}" />
+                <input type="hidden" name="signature" value="{{ payment.liqpay_details.liqpay_signature }}" />
+                <button type="submit" class="btn btn-primary">Оплатити зараз</button>
+            </form>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

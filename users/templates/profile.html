@@ -1,0 +1,173 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% block title %}Мій профіль - MyCarShare{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <div class="row">
+        <div class="col-md-4 text-center mb-4">
+            <div class="card">
+                <div class="card-body">
+                    {% if user.profile_picture %}
+                        <img src="{{ user.profile_picture.url }}" alt="Фото профілю" class="profile-img mb-3">
+                    {% else %}
+                        <img src="/media/profile_default.png" alt="Фото профілю за замовчуванням" class="profile-img mb-3">
+                    {% endif %}
+                    <h4>{{ user.get_full_name|default:user.username }}</h4>
+                    <p class="text-muted">{{ user.email }}</p>
+                    
+                    {% if user.is_verified_driver %}
+                        <div class="badge bg-success mb-2">Водія підтверджено</div>
+                    {% else %}
+                        <div class="badge bg-warning text-dark mb-2">Водія не підтверджено</div>
+                        <div>
+                            <a href="{% url 'verification-create' %}" class="btn btn-sm btn-outline-primary">Підтвердити</a>
+                        </div>
+                    {% endif %}
+                    
+                    <div class="mt-3">
+                        <p><strong>Рейтинг:</strong> {{ user.rating }} <i class="bi bi-star-fill text-warning"></i></p>
+                        <p><strong>Акаунт створено:</strong> {{ user.date_joined|date:"d.m.Y" }}</p>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <a href="{% url 'change-password' %}" class="btn btn-outline-secondary">Змінити пароль</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Редагувати профіль</h3>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data" novalidate>
+                        {% csrf_token %}
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="{{ form.first_name.id_for_label }}" class="form-label">Ім'я</label>
+                                <input type="text" class="form-control {% if form.first_name.errors %}is-invalid{% endif %}" 
+                                       id="{{ form.first_name.id_for_label }}" name="{{ form.first_name.name }}" 
+                                       value="{{ form.first_name.value|default:'' }}">
+                                {% if form.first_name.errors %}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.first_name.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="{{ form.last_name.id_for_label }}" class="form-label">Прізвище</label>
+                                <input type="text" class="form-control {% if form.last_name.errors %}is-invalid{% endif %}" 
+                                       id="{{ form.last_name.id_for_label }}" name="{{ form.last_name.name }}" 
+                                       value="{{ form.last_name.value|default:'' }}">
+                                {% if form.last_name.errors %}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.last_name.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="{{ form.phone_number.id_for_label }}" class="form-label">Номер телефону</label>
+                                <input type="tel" class="form-control {% if form.phone_number.errors %}is-invalid{% endif %}" 
+                                       id="{{ form.phone_number.id_for_label }}" name="{{ form.phone_number.name }}" 
+                                       value="{{ form.phone_number.value|default:'' }}">
+                                {% if form.phone_number.errors %}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.phone_number.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="{{ form.date_of_birth.id_for_label }}" class="form-label">Дата народження</label>
+                                <input type="date" class="form-control {% if form.date_of_birth.errors %}is-invalid{% endif %}" 
+                                       id="{{ form.date_of_birth.id_for_label }}" name="{{ form.date_of_birth.name }}" 
+                                       value="{{ form.date_of_birth.value|date:'Y-m-d'|default:'' }}">
+                                {% if form.date_of_birth.errors %}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.date_of_birth.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.profile_picture.id_for_label }}" class="form-label">Фото профілю</label>
+                            <input type="file" class="form-control {% if form.profile_picture.errors %}is-invalid{% endif %}" 
+                                   id="{{ form.profile_picture.id_for_label }}" name="{{ form.profile_picture.name }}">
+                            {% if form.profile_picture.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.profile_picture.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            {% if user.profile_picture %}
+                                <div class="form-text">Поточне фото: {{ user.profile_picture.name }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <button type="submit" class="btn btn-primary">Зберегти зміни</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Валідація номера телефону
+    document.addEventListener('DOMContentLoaded', function() {
+        const phoneInput = document.getElementById('{{ form.phone_number.id_for_label }}');
+        
+        phoneInput.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.startsWith('7') || value.startsWith('8')) {
+                value = '+380' + value.substring(1);
+            } else if (value && !value.startsWith('+')) {
+                value = '+380' + value;
+            }
+            e.target.value = value;
+        });
+    });
+    
+    // Попередній перегляд зображення
+    document.addEventListener('DOMContentLoaded', function() {
+        const input = document.getElementById('{{ form.profile_picture.id_for_label }}');
+        const profileImg = document.querySelector('.profile-img');
+        
+        input.addEventListener('change', function() {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    profileImg.src = e.target.result;
+                }
+                
+                reader.readAsDataURL(input.files[0]);
+            }
+        });
+    });
+</script>
+{% endblock %}

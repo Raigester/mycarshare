@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+
+{% block title %}Оплата - MyCarShare{% endblock %}
+
+{% block content %}
+<div class="form-container" style="max-width: 600px;">
+    <h2 class="mb-4">Оплата</h2>
+    
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h4 class="mb-0">Інформація про платіж</h4>
+        </div>
+        <div class="card-body">
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <p><strong>Номер платежу:</strong> {{ payment.id }}</p>
+                    <p><strong>Дата створення:</strong> {{ payment.created_at|date:"d.m.Y H:i" }}</p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Сума:</strong> {{ payment.amount|floatformat:2 }} ₴</p>
+                    <p><strong>Платіжна система:</strong> 
+                        {% if payment.payment_provider == 'liqpay' %}
+                            LiqPay
+                        {% else %}
+                            {{ payment.payment_provider }}
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+            
+            <div class="alert alert-info mb-4">
+                <p><i class="bi bi-info-circle"></i> Ви будете перенаправлені на сторінку платіжної системи для завершення оплати.</p>
+                <p class="mb-0">Після завершення оплати ви будете автоматично перенаправлені назад на сайт.</p>
+            </div>
+            
+            <div class="d-grid gap-2">
+                <form action="https://www.liqpay.ua/api/3/checkout" method="POST" id="payment-form">
+                    <input type="hidden" name="data" value="{{ liqpay_data }}" />
+                    <input type="hidden" name="signature" value="{{ liqpay_signature }}" />
+                    <button type="submit" class="btn btn-success btn-lg w-100">Перейти до оплати</button>
+                </form>
+                <a href="{% url 'payment-list' %}" class="btn btn-outline-secondary">Скасувати платіж</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="alert alert-warning">
+        <h5><i class="bi bi-shield-lock"></i> Безпека платежів</h5>
+        <p>Усі платежі обробляються через захищене з'єднання. Дані вашої картки не зберігаються на нашому сервері та обробляються безпосередньо платіжною системою.</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Автоматичне відправлення форми оплати через 2 секунди
+    document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(function() {
+            document.getElementById('payment-form').submit();
+        }, 2000);
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+
+{% block title %}Вихід - MyCarShare{% endblock %}
+
+{% block content %}
+<div class="form-container text-center" style="max-width: 500px;">
+    <div class="p-4">
+        <h2 class="mb-4">Вихід із системи</h2>
+        <div class="alert alert-success" role="alert">
+            Ви успішно вийшли зі свого акаунту.
+        </div>
+        <p class="lead">Дякуємо за використання MyCarShare!</p>
+        <a href="{% url 'login' %}" class="btn btn-primary mt-3">Увійти знову</a>
+    </div>
+</div>
+{% endblock %}

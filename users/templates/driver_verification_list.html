@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+
+{% block title %}Заявки на верифікацію - MyCarShare{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <h2 class="mb-4">Мої заявки на верифікацію водія</h2>
+    
+    <div class="d-flex justify-content-between mb-4">
+        <p class="mb-0">Тут відображається статус усіх ваших заявок на верифікацію водійських прав</p>
+        <a href="{% url 'verification-create' %}" class="btn btn-primary">Нова заявка</a>
+    </div>
+    
+    {% if verifications %}
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Дата створення</th>
+                        <th>Статус</th>
+                        <th>Оновлено</th>
+                        <th>Коментар</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for verification in verifications %}
+                        <tr>
+                            <td>{{ verification.created_at|date:"d.m.Y H:i" }}</td>
+                            <td>
+                                {% if verification.status == 'pending' %}
+                                    <span class="badge bg-warning text-dark verification-status-pending">На розгляді</span>
+                                {% elif verification.status == 'approved' %}
+                                    <span class="badge bg-success verification-status-approved">Схвалено</span>
+                                {% elif verification.status == 'rejected' %}
+                                    <span class="badge bg-danger verification-status-rejected">Відхилено</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ verification.updated_at|date:"d.m.Y H:i" }}</td>
+                            <td>
+                                {% if verification.comment %}
+                                    {{ verification.comment }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            У вас ще немає заявок на верифікацію водійських прав. 
+            <a href="{% url 'verification-create' %}" class="alert-link">Створити нову заявку</a>
+        </div>
+    {% endif %}
+    
+    <div class="mt-4">
+        <a href="{% url 'profile' %}" class="btn btn-outline-secondary">Повернутися в профіль</a>
+    </div>
+</div>
+{% endblock %}

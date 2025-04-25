@@ -1,143 +1,139 @@
 from decimal import Decimal
-from rest_framework import viewsets, generics, permissions, status
-from rest_framework.response import Response
-from rest_framework.decorators import action
-from django.contrib.auth import get_user_model
-from .models import DriverLicenseVerification, UserBalance
-from .serializers import (
-    UserSerializer, UserRegistrationSerializer, DriverLicenseVerificationSerializer,
-    UserProfileUpdateSerializer, ChangePasswordSerializer
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth import login, update_session_auth_hash
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.contrib import messages
+from django.views.generic import CreateView, UpdateView, ListView, DetailView, FormView
+from django.urls import reverse_lazy, reverse
+from django.http import HttpResponseRedirect
+
+from .models import User, DriverLicenseVerification, UserBalance
+from .forms import (
+    UserRegistrationForm, UserProfileUpdateForm, CustomPasswordChangeForm,
+    DriverLicenseVerificationForm, AdminVerificationForm, BalanceAddForm
 )
 
-User = get_user_model()
-
-class UserRegistrationView(generics.CreateAPIView):
-    """Register a new user"""
+class UserRegistrationView(CreateView):
+    """View for user registration"""
+    form_class = UserRegistrationForm
+    template_name = 'register.html'
+    success_url = reverse_lazy('login')
     
-    queryset = User.objects.all()
-    serializer_class = UserRegistrationSerializer
-    permission_classes = [permissions.AllowAny]
+    def form_valid(self, form):
+        user = form.save()
+        messages.success(self.request, 'Account created successfully! You can now log in.')
+        return super().form_valid(form)
 
-class UserProfileView(generics.RetrieveUpdateAPIView):
-    """View and update user profile"""
-    
-    serializer_class = UserProfileUpdateSerializer
-    permission_classes = [permissions.IsAuthenticated]
+class UserProfileView(LoginRequiredMixin, UpdateView):
+    """View for user profile"""
+    model = User
+    form_class = UserProfileUpdateForm
+    template_name = 'profile.html'
+    success_url = reverse_lazy('profile')
     
     def get_object(self):
         return self.request.user
     
-    def get_serializer_class(self):
-        if self.request.method == 'GET':
-            return UserSerializer
-        return UserProfileUpdateSerializer
+    def form_valid(self, form):
+        messages.success(self.request, 'Your profile has been updated!')
+        return super().form_valid(form)
 
-class ChangePasswordView(generics.UpdateAPIView):
-    """Change user password"""
+@login_required
+def change_password_view(request):
+    """View for changing user password"""
+    if request.method == 'POST':
+        form = CustomPasswordChangeForm(request.user, request.POST)
+        if form.is_valid():
+            user = form.save()
+            update_session_auth_hash(request, user)  # Keep user logged in
+            messages.success(request, 'Your password was successfully updated!')
+            return redirect('profile')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        form = CustomPasswordChangeForm(request.user)
     
-    serializer_class = ChangePasswordSerializer
-    permission_classes = [permissions.IsAuthenticated]
-    
-    def get_object(self):
-        return self.request.user
-    
-    def update(self, request, *args, **kwargs):
-        user = self.get_object()
-        serializer = self.get_serializer(data=request.data)
-        
-        if serializer.is_valid():
-            # Check old password
-            if not user.check_password(serializer.validated_data['old_password']):
-                return Response({"old_password": ["Incorrect password"]}, 
-                                status=status.HTTP_400_BAD_REQUEST)
-            
-            # Set new password
-            user.set_password(serializer.validated_data['new_password'])
-            user.save()
-            return Response({"message": "Password successfully changed"}, 
-                            status=status.HTTP_200_OK)
-        
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    return render(request, 'change_password.html', {'form': form})
 
-class DriverLicenseVerificationViewSet(viewsets.ModelViewSet):
-    """API for driver license verification"""
+class DriverLicenseVerificationCreateView(LoginRequiredMixin, CreateView):
+    """View for creating a driver license verification request"""
+    model = DriverLicenseVerification
+    form_class = DriverLicenseVerificationForm
+    template_name = 'driver_verification_form.html'
+    success_url = reverse_lazy('verification-list')
     
-    queryset = DriverLicenseVerification.objects.all()
-    serializer_class = DriverLicenseVerificationSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    def form_valid(self, form):
+        form.instance.user = self.request.user
+        messages.success(self.request, 'Your driver license verification request has been submitted!')
+        return super().form_valid(form)
+
+class DriverLicenseVerificationListView(LoginRequiredMixin, ListView):
+    """View for listing user's driver license verification requests"""
+    model = DriverLicenseVerification
+    template_name = 'driver_verification_list.html'
+    context_object_name = 'verifications'
     
     def get_queryset(self):
-        # Users see only their own requests, admins see all
-        user = self.request.user
-        if not user or not user.is_authenticated:
-            return DriverLicenseVerification.objects.none()
-        if user.is_staff:
-            return DriverLicenseVerification.objects.all()
-        return DriverLicenseVerification.objects.filter(user=user)
-    
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
-    
-    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAdminUser])
-    def approve(self, request, pk=None):
-        """Approve a verification request (admin only)"""
-        verification = self.get_object()
-        verification.status = 'approved'
-        verification.save()
-        
-        # Update user status
-        user = verification.user
-        user.is_verified_driver = True
-        user.save()
-        
-        return Response({"message": "Verification successfully approved"})
-    
-    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAdminUser])
-    def reject(self, request, pk=None):
-        """Reject a verification request (admin only)"""
-        verification = self.get_object()
-        verification.status = 'rejected'
-        verification.comment = request.data.get('comment', '')
-        verification.save()
-        
-        return Response({"message": "Verification rejected"})
+        return DriverLicenseVerification.objects.filter(user=self.request.user)
 
-class UserBalanceView(generics.GenericAPIView):
-    """API for managing user balance"""
+class AdminVerificationListView(UserPassesTestMixin, ListView):
+    model = DriverLicenseVerification
+    template_name = 'admin_verification_list.html'
+    context_object_name = 'verifications'
+
+    def test_func(self):
+        return self.request.user.is_staff
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['pending_verifications'] = DriverLicenseVerification.objects.filter(status='pending').order_by('-created_at')
+        context['approved_verifications'] = DriverLicenseVerification.objects.filter(status='approved').order_by('-created_at')
+        context['rejected_verifications'] = DriverLicenseVerification.objects.filter(status='rejected').order_by('-created_at')
+        return context
+
+class AdminVerificationUpdateView(UserPassesTestMixin, UpdateView):
+    """Admin view for updating a verification request"""
+    model = DriverLicenseVerification
+    form_class = AdminVerificationForm
+    template_name = 'admin_verification_detail.html'
+    success_url = reverse_lazy('admin-verification-list')
     
-    permission_classes = [permissions.IsAuthenticated]
+    def test_func(self):
+        return self.request.user.is_staff
     
-    @action(detail=False, methods=['post'])
-    def add_balance(self, request):
-        """Add funds to the user's balance"""
-        user = request.user
-        amount = Decimal(request.data.get('amount', '0'))
+    def form_valid(self, form):
+        verification = form.save()
         
-        if amount <= 0:
-            return Response(
-                {"error": "Amount must be positive"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        balance, created = UserBalance.objects.get_or_create(user=user)
-        balance.amount += amount
-        balance.save()
-        
-        return Response({
-            "message": f"Balance successfully updated",
-            "current_balance": balance.amount
-        })
+        # If verification is approved, update user status
+        if verification.status == 'approved':
+            user = verification.user
+            user.is_verified_driver = True
+            user.save()
+            messages.success(self.request, f'Driver verification for {user.username} approved!')
+        elif verification.status == 'rejected':
+            messages.info(self.request, f'Driver verification for {verification.user.username} rejected.')
+            
+        return super().form_valid(form)
+
+@login_required
+def user_balance_view(request):
+    """View for displaying and adding to user balance"""
+    # Get or create user balance
+    balance, created = UserBalance.objects.get_or_create(user=request.user)
     
-    @action(detail=False, methods=['get'])
-    def get_balance(self, request):
-        """Retrieve the user's current balance"""
-        user = request.user
-        
-        try:
-            balance = user.balance
-        except UserBalance.DoesNotExist:
-            balance = UserBalance.objects.create(user=user)
-        
-        return Response({
-            "balance": balance.amount
-        })
+    if request.method == 'POST':
+        form = BalanceAddForm(request.POST)
+        if form.is_valid():
+            amount = form.cleaned_data['amount']
+            balance.amount += amount
+            balance.save()
+            messages.success(request, f'Successfully added {amount} to your balance!')
+            return redirect('balance')
+    else:
+        form = BalanceAddForm()
+    
+    return render(request, 'balance.html', {
+        'balance': balance,
+        'form': form
+    })

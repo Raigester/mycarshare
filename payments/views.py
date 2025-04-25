@@ -6,67 +6,140 @@ import uuid
 import hmac
 from decimal import Decimal
 from django.conf import settings
-from django.shortcuts import get_object_or_404
+from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.urls import reverse
-from rest_framework import viewsets, generics, permissions, status
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.decorators import action
+from django.views.generic import ListView, DetailView, FormView, View
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.contrib import messages
+from django.db.models import Sum, Q
+from django.utils import timezone
+import datetime
 
 from users.models import UserBalance
 from .models import Payment, LiqPayPayment, PaymentTransaction
-from .serializers import (
-    PaymentSerializer, CreatePaymentSerializer, PaymentTransactionSerializer
-)
+from .forms import CreatePaymentForm, PaymentFilterForm, TransactionFilterForm
 
-class PaymentViewSet(viewsets.ModelViewSet):
-    """API endpoint for payments"""
+class PaymentListView(LoginRequiredMixin, ListView):
+    """View for listing user's payments"""
     
-    queryset = Payment.objects.all()
-    serializer_class = PaymentSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    model = Payment
+    template_name = 'payment_list.html'
+    context_object_name = 'payments'
+    paginate_by = 10
     
     def get_queryset(self):
-        # Users see only their own payments, admins see all
+        """Get filtered payments for the current user or all for admin"""
         user = self.request.user
-        if not user.is_authenticated:
-            return Payment.objects.none()
+        
+        # Base queryset - user's payments or all for admin
+        if user.is_staff:
+            queryset = Payment.objects.all()
+        else:
+            queryset = Payment.objects.filter(user=user)
+        
+        # Apply filters if form submitted
+        form = PaymentFilterForm(self.request.GET)
+        if form.is_valid():
+            # Filter by status
+            if form.cleaned_data.get('status'):
+                queryset = queryset.filter(status=form.cleaned_data['status'])
+            
+            # Filter by payment provider
+            if form.cleaned_data.get('payment_provider'):
+                queryset = queryset.filter(payment_provider=form.cleaned_data['payment_provider'])
+            
+            # Filter by date range
+            if form.cleaned_data.get('date_from'):
+                queryset = queryset.filter(created_at__gte=form.cleaned_data['date_from'])
+                
+            if form.cleaned_data.get('date_to'):
+                # Add one day to include the end date
+                date_to = form.cleaned_data['date_to'] + datetime.timedelta(days=1)
+                queryset = queryset.filter(created_at__lte=date_to)
+                
+        return queryset.order_by('-created_at')
+    
+    def get_context_data(self, **kwargs):
+        """Add filter form and payment stats to context"""
+        context = super().get_context_data(**kwargs)
+        context['filter_form'] = PaymentFilterForm(self.request.GET)
+        
+        # Add payment statistics
+        user = self.request.user
+        
+        if user.is_staff:
+            payments = Payment.objects.all()
+        else:
+            payments = Payment.objects.filter(user=user)
+            
+        # Payments summary
+        context['total_payments'] = payments.count()
+        
+        # Successful payments summary
+        successful_payments = payments.filter(status='completed')
+        context['total_successful'] = successful_payments.count()
+        context['total_amount'] = successful_payments.aggregate(
+            total=Sum('amount')
+        )['total'] or 0
+        
+        # Last 30 days summary
+        thirty_days_ago = timezone.now() - datetime.timedelta(days=30)
+        context['recent_payments'] = successful_payments.filter(
+            created_at__gte=thirty_days_ago
+        ).count()
+        
+        context['recent_amount'] = successful_payments.filter(
+            created_at__gte=thirty_days_ago
+        ).aggregate(total=Sum('amount'))['total'] or 0
+        
+        return context
+        
+class PaymentDetailView(LoginRequiredMixin, DetailView):
+    """View for payment details"""
+    
+    model = Payment
+    template_name = 'payment_detail.html'
+    context_object_name = 'payment'
+    
+    def get_queryset(self):
+        """Ensure users can only see their own payments unless they're staff"""
+        user = self.request.user
         if user.is_staff:
             return Payment.objects.all()
         return Payment.objects.filter(user=user)
+
+class CreatePaymentView(LoginRequiredMixin, FormView):
+    """View for creating new payments"""
     
-    def create(self, request):
-        """Create new payment"""
-        serializer = CreatePaymentSerializer(data=request.data)
-        
-        if serializer.is_valid():
-            amount = serializer.validated_data['amount']
-            provider = serializer.validated_data['payment_provider']
-            
-            # Create the payment record
-            payment = Payment.objects.create(
-                user=request.user,
-                amount=amount,
-                payment_provider=provider,
-                status='pending'
-            )
-            
-            # Process payment based on provider
-            if provider == 'liqpay':
-                return self._create_liqpay_payment(payment, request)
-            
-            return Response(
-                {"error": "Unsupported payment provider"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    form_class = CreatePaymentForm
+    template_name = 'create_payment.html'
     
-    def _create_liqpay_payment(self, payment, request):
-        """Create a LiqPay payment"""
+    def form_valid(self, form):
+        """Process the payment"""
+        user = self.request.user
+        amount = form.cleaned_data['amount']
+        provider = form.cleaned_data['payment_provider']
+        
+        # Create the payment record
+        payment = Payment.objects.create(
+            user=user,
+            amount=amount,
+            payment_provider=provider,
+            status='pending'
+        )
+        
+        # Process payment based on provider
+        if provider == 'liqpay':
+            return self._create_liqpay_payment(payment)
+        
+        messages.error(self.request, "Непідтримуваний платіжний провайдер")
+        return redirect('payment-list')
+    
+    def _create_liqpay_payment(self, payment):
+        """Create a LiqPay payment and redirect to payment page"""
         try:
             # Generate unique order ID
             order_id = f"order_{payment.id}_{payment.user.id}"
@@ -80,8 +153,8 @@ class PaymentViewSet(viewsets.ModelViewSet):
                 'currency': 'UAH',
                 'description': 'CarShare Balance Top-up',
                 'order_id': order_id,
-                'result_url': request.build_absolute_uri(reverse('payment-success')),
-                'server_url': request.build_absolute_uri(reverse('liqpay-callback')),
+                'result_url': self.request.build_absolute_uri(reverse('payment-success')),
+                'server_url': self.request.build_absolute_uri(reverse('liqpay-callback')),
             }
             
             # Convert data to JSON and then to base64
@@ -100,66 +173,69 @@ class PaymentViewSet(viewsets.ModelViewSet):
                 liqpay_signature=signature
             )
             
-            return Response({
+            # Save LiqPay data in session for the template
+            self.request.session['liqpay_data'] = {
                 'payment_id': payment.id,
-                'liqpay_checkout_data': {
-                    'data': data_base64,
-                    'signature': signature
-                },
-                'liqpay_form_url': 'https://www.liqpay.ua/api/3/checkout'
-            })
+                'data': data_base64,
+                'signature': signature,
+            }
+            
+            return redirect('payment-process')
             
         except Exception as e:
             payment.status = 'failed'
             payment.save()
-            return Response(
-                {"error": str(e)},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            messages.error(self.request, f"Помилка при створенні платежу: {str(e)}")
+            return redirect('payment-list')
 
-class PaymentTransactionViewSet(viewsets.ReadOnlyModelViewSet):
-    """API endpoint for payment transactions"""
+class ProcessPaymentView(LoginRequiredMixin, View):
+    """View for processing LiqPay payment"""
     
-    serializer_class = PaymentTransactionSerializer
-    permission_classes = [permissions.IsAuthenticated]
-    
-    def get_queryset(self):
-        # Users see only their own transactions, admins see all
-        user = self.request.user
-        if not user.is_authenticated:
-            return PaymentTransaction.objects.none()
-        if user.is_staff:
-            return PaymentTransaction.objects.all()
-        return PaymentTransaction.objects.filter(user=user)
+    def get(self, request):
+        """Show LiqPay payment form"""
+        # Get LiqPay data from session
+        liqpay_data = request.session.get('liqpay_data')
+        
+        if not liqpay_data:
+            messages.error(request, "Дані платежу не знайдено. Будь ласка, почніть заново.")
+            return redirect('create-payment')
+        
+        # Get payment for additional info
+        try:
+            payment_id = liqpay_data.get('payment_id')
+            payment = Payment.objects.get(id=payment_id, user=request.user)
+            
+            context = {
+                'payment': payment,
+                'liqpay_data': liqpay_data['data'],
+                'liqpay_signature': liqpay_data['signature'],
+                'liqpay_form_url': 'https://www.liqpay.ua/api/3/checkout'
+            }
+            
+            return render(request, 'process_payment.html', context)
+            
+        except Payment.DoesNotExist:
+            messages.error(request, "Платіж не знайдено. Будь ласка, почніть заново.")
+            return redirect('create-payment')
 
-class PaymentSuccessView(APIView):
+class PaymentSuccessView(LoginRequiredMixin, View):
     """Handle successful payments"""
     
-    permission_classes = [permissions.IsAuthenticated]
-    
     def get(self, request):
-        # This view is called after user is redirected from payment gateway
-        # We just show a success message, actual payment processing 
-        # happens in webhook callbacks
-        return Response({
-            "message": "Payment was processed. If payment was successful, your balance will be updated shortly."
-        })
+        # This view is displayed after the customer is redirected from the payment system
+        messages.success(request, "Платіж обробляється. Якщо платіж був успішним, ваш баланс буде оновлено найближчим часом.")
+        return redirect('payment-list')
 
-class PaymentCancelView(APIView):
+class PaymentCancelView(LoginRequiredMixin, View):
     """Handle cancelled payments"""
     
-    permission_classes = [permissions.IsAuthenticated]
-    
     def get(self, request):
-        return Response({
-            "message": "Payment was cancelled",
-        })
+        messages.info(request, "Платіж було скасовано.")
+        return redirect('payment-list')
 
 @method_decorator(csrf_exempt, name='dispatch')
-class LiqPayCallbackView(APIView):
+class LiqPayCallbackView(View):
     """Handle LiqPay callbacks"""
-    
-    permission_classes = [permissions.AllowAny]
     
     def post(self, request):
         data = request.POST.get('data')
@@ -224,6 +300,77 @@ class LiqPayCallbackView(APIView):
             payment=payment,
             amount=payment.amount,
             transaction_type='deposit',
-            description=f"Balance top-up via LiqPay",
+            description=f"Поповнення балансу через LiqPay",
             balance_after=balance.amount
         )
+
+class TransactionListView(LoginRequiredMixin, ListView):
+    """View for listing transactions"""
+    
+    model = PaymentTransaction
+    template_name = 'transaction_list.html'
+    context_object_name = 'transactions'
+    paginate_by = 15
+    
+    def get_queryset(self):
+        """Get filtered transactions for the current user or all for admin"""
+        user = self.request.user
+        
+        # Base queryset - user's transactions or all for admin
+        if user.is_staff:
+            queryset = PaymentTransaction.objects.all()
+        else:
+            queryset = PaymentTransaction.objects.filter(user=user)
+        
+        # Apply filters if form submitted
+        form = TransactionFilterForm(self.request.GET)
+        if form.is_valid():
+            # Filter by transaction type
+            if form.cleaned_data.get('transaction_type'):
+                queryset = queryset.filter(transaction_type=form.cleaned_data['transaction_type'])
+            
+            # Filter by date range
+            if form.cleaned_data.get('date_from'):
+                queryset = queryset.filter(created_at__gte=form.cleaned_data['date_from'])
+                
+            if form.cleaned_data.get('date_to'):
+                # Add one day to include the end date
+                date_to = form.cleaned_data['date_to'] + datetime.timedelta(days=1)
+                queryset = queryset.filter(created_at__lte=date_to)
+                
+        return queryset.order_by('-created_at')
+    
+    def get_context_data(self, **kwargs):
+        """Add filter form and transaction stats to context"""
+        context = super().get_context_data(**kwargs)
+        context['filter_form'] = TransactionFilterForm(self.request.GET)
+        
+        # Add transaction statistics
+        user = self.request.user
+        
+        if user.is_staff:
+            transactions = PaymentTransaction.objects.all()
+            deposits = transactions.filter(transaction_type='deposit')
+            withdrawals = transactions.filter(transaction_type='withdrawal')
+        else:
+            transactions = PaymentTransaction.objects.filter(user=user)
+            deposits = transactions.filter(transaction_type='deposit')
+            withdrawals = transactions.filter(transaction_type='withdrawal')
+            
+        # Transactions summary
+        context['total_transactions'] = transactions.count()
+        context['total_deposits'] = deposits.aggregate(
+            total=Sum('amount')
+        )['total'] or 0
+        context['total_withdrawals'] = withdrawals.aggregate(
+            total=Sum('amount')
+        )['total'] or 0
+        
+        # Current balance
+        try:
+            balance = UserBalance.objects.get(user=user).amount
+        except UserBalance.DoesNotExist:
+            balance = 0
+        context['current_balance'] = balance
+        
+        return context
