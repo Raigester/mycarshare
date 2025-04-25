@@ -54,13 +54,6 @@ class BookingSerializer(serializers.ModelSerializer):
             if start_time <= timezone.now():
                 raise serializers.ValidationError({"start_time": "Start time must be in the future"})
             
-            # Check minimum duration (e.g., 1 hour)
-            min_duration = timezone.timedelta(hours=1)
-            if end_time - start_time < min_duration:
-                raise serializers.ValidationError(
-                    {"end_time": "The minimum booking duration is 1 hour"}
-                )
-            
             # Check for overlapping bookings
             if car:
                 booking_id = self.instance.id if self.instance else None
