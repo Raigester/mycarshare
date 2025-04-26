@@ -137,37 +137,45 @@
 
 {% block extra_js %}
 <script>
-    // Валідація номера телефону
+    // phone number input
     document.addEventListener('DOMContentLoaded', function() {
         const phoneInput = document.getElementById('{{ form.phone_number.id_for_label }}');
-        
-        phoneInput.addEventListener('input', function(e) {
-            let value = e.target.value.replace(/\D/g, '');
-            if (value.startsWith('7') || value.startsWith('8')) {
-                value = '+380' + value.substring(1);
-            } else if (value && !value.startsWith('+')) {
-                value = '+380' + value;
-            }
-            e.target.value = value;
-        });
-    });
-    
-    // Попередній перегляд зображення
-    document.addEventListener('DOMContentLoaded', function() {
-        const input = document.getElementById('{{ form.profile_picture.id_for_label }}');
+        const profilePictureInput = document.getElementById('{{ form.profile_picture.id_for_label }}');
         const profileImg = document.querySelector('.profile-img');
-        
-        input.addEventListener('change', function() {
-            if (input.files && input.files[0]) {
-                const reader = new FileReader();
-                
-                reader.onload = function(e) {
-                    profileImg.src = e.target.result;
-                }
-                
-                reader.readAsDataURL(input.files[0]);
+
+        if (phoneInput) {
+            if (!phoneInput.value.startsWith('+380')) {
+                phoneInput.value = '+380';
             }
-        });
+
+            phoneInput.addEventListener('input', function(e) {
+                let value = e.target.value.replace(/\D/g, '');
+
+                if (value.startsWith('380')) {
+                    e.target.value = '+' + value;
+                } else {
+                    e.target.value = '+380' + value;
+                }
+            });
+
+            phoneInput.addEventListener('focus', function(e) {
+                if (!e.target.value.startsWith('+380')) {
+                    e.target.value = '+380';
+                }
+            });
+        }
+        // Preview profile picture
+        if (profilePictureInput && profileImg) {
+            profilePictureInput.addEventListener('change', function() {
+                if (profilePictureInput.files && profilePictureInput.files[0]) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        profileImg.src = e.target.result;
+                    }
+                    reader.readAsDataURL(profilePictureInput.files[0]);
+                }
+            });
+        }
     });
 </script>
 {% endblock %}

@@ -154,19 +154,31 @@
 
 {% block extra_js %}
 <script>
-    // Додаємо валідацію телефону
     document.addEventListener('DOMContentLoaded', function() {
         const phoneInput = document.getElementById('{{ form.phone_number.id_for_label }}');
-        
-        phoneInput.addEventListener('input', function(e) {
-            let value = e.target.value.replace(/\D/g, '');
-            if (value.startsWith('7') || value.startsWith('8')) {
-                value = '+380' + value.substring(1);
-            } else if (value && !value.startsWith('+')) {
-                value = '+380' + value;
+
+        if (phoneInput) {
+            if (!phoneInput.value.startsWith('+380')) {
+                phoneInput.value = '+380';
             }
-            e.target.value = value;
-        });
+
+            phoneInput.addEventListener('input', function(e) {
+                if (!e.target.value.startsWith('+380')) {
+                    let cleaned = e.target.value.replace(/\D/g, '');
+                    if (cleaned.startsWith('380')) {
+                        e.target.value = '+' + cleaned;
+                    } else {
+                        e.target.value = '+380' + cleaned;
+                    }
+                }
+            });
+
+            phoneInput.addEventListener('focus', function(e) {
+                if (!e.target.value.startsWith('+380')) {
+                    e.target.value = '+380';
+                }
+            });
+        }
     });
 </script>
 {% endblock %}
