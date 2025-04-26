@@ -26,13 +26,6 @@
                             {{ payment.payment_provider }}
                         {% endif %}
                     </p>
-                    <p><strong>Ідентифікатор у платіжній системі:</strong> 
-                        {% if payment.provider_payment_id %}
-                            {{ payment.provider_payment_id }}
-                        {% else %}
-                            <span class="text-muted">Немає даних</span>
-                        {% endif %}
-                    </p>
                     <p><strong>Статус:</strong> 
                         {% if payment.status == 'pending' %}
                             <span class="badge bg-warning text-dark">Очікує</span>

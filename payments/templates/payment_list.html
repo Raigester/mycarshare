@@ -84,7 +84,6 @@
                         <th>ID</th>
                         <th>Дата</th>
                         <th>Сума</th>
-                        <th>Провайдер</th>
                         <th>Статус</th>
                         <th>Дії</th>
                     </tr>
@@ -95,13 +94,6 @@
                             <td>{{ payment.id }}</td>
                             <td>{{ payment.created_at|date:"d.m.Y H:i" }}</td>
                             <td>{{ payment.amount|floatformat:2 }} ₴</td>
-                            <td>
-                                {% if payment.payment_provider == 'liqpay' %}
-                                    LiqPay
-                                {% else %}
-                                    {{ payment.payment_provider }}
-                                {% endif %}
-                            </td>
                             <td>
                                 {% if payment.status == 'pending' %}
                                     <span class="badge bg-warning text-dark">Очікує</span>

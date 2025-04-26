@@ -270,7 +270,6 @@ class LiqPayCallbackView(View):
                     
                     # Update payment status
                     payment.status = 'completed'
-                    payment.provider_payment_id = decoded_data.get('payment_id', '')
                     payment.save()
                     
                     # Update user balance

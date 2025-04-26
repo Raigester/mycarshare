@@ -355,8 +355,7 @@ def end_rental(request, pk):
                                 user=booking.user,
                                 amount=amount_to_bill,
                                 payment_provider='internal',
-                                status='completed',
-                                provider_payment_id=f'booking-{booking.id}'
+                                status='completed'
                             )
                             
                             PaymentTransaction.objects.create(
