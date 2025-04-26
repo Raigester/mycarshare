@@ -128,6 +128,10 @@
                 <input type="hidden" name="signature" value="{{ payment.liqpay_details.liqpay_signature }}" />
                 <button type="submit" class="btn btn-primary">Оплатити зараз</button>
             </form>
+            <form action="{% url 'payment-cancel-action' payment.id %}" method="post" style="display: inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger">Скасувати</button>
+            </form>
         {% endif %}
     </div>
 </div>

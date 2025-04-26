@@ -374,3 +374,18 @@ class TransactionListView(LoginRequiredMixin, ListView):
         context['current_balance'] = balance
         
         return context
+    
+@method_decorator(csrf_exempt, name='dispatch')
+class CancelPaymentActionView(LoginRequiredMixin, View):
+    def post(self, request, pk):
+        payment = get_object_or_404(Payment, pk=pk, user=request.user)
+        
+        if payment.status != 'pending':
+            messages.error(request, "Платіж вже оброблений або скасований.")
+            return redirect('payment-detail', pk=pk)
+        
+        payment.status = 'cancelled'
+        payment.save()
+        
+        messages.success(request, "Платіж успішно скасовано.")
+        return redirect('payment-detail', pk=pk)
