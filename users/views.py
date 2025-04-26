@@ -3,6 +3,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.contrib.auth.views import LoginView
 from django.contrib import messages
 from django.views.generic import CreateView, UpdateView, ListView, DetailView, FormView
 from django.urls import reverse_lazy, reverse
@@ -14,6 +15,8 @@ from .forms import (
     DriverLicenseVerificationForm, AdminVerificationForm, BalanceAddForm
 )
 
+
+
 class UserRegistrationView(CreateView):
     """View for user registration"""
     form_class = UserRegistrationForm
@@ -24,6 +27,14 @@ class UserRegistrationView(CreateView):
         user = form.save()
         messages.success(self.request, 'Account created successfully! You can now log in.')
         return super().form_valid(form)
+
+class CustomLoginView(LoginView):
+    template_name = 'login.html'
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated:
+            return redirect('profile')
+        return super().dispatch(request, *args, **kwargs)
 
 class UserProfileView(LoginRequiredMixin, UpdateView):
     """View for user profile"""
