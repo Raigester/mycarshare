@@ -12,7 +12,6 @@ class Payment(models.Model):
         ('completed', _('Completed')),
         ('failed', _('Failed')),
         ('cancelled', _('Cancelled')),
-        ('refunded', _('Refunded')),
     )
     
     PAYMENT_PROVIDER_CHOICES = (
