@@ -57,16 +57,27 @@ def change_password_view(request):
     return render(request, 'change_password.html', {'form': form})
 
 class DriverLicenseVerificationCreateView(LoginRequiredMixin, CreateView):
-    """View for creating a driver license verification request"""
     model = DriverLicenseVerification
     form_class = DriverLicenseVerificationForm
     template_name = 'driver_verification_form.html'
     success_url = reverse_lazy('verification-list')
     
+    def dispatch(self, request, *args, **kwargs):
+        active_verification = DriverLicenseVerification.objects.filter(
+            user=request.user,
+        ).exclude(status='rejected').order_by('-created_at').first()
+
+        if active_verification:
+            messages.error(request, 'Ви вже маєте схвалену заявку на верифікацію або ваша заявка в очікуванні розгляду.')
+            return redirect('verification-list')
+
+        return super().dispatch(request, *args, **kwargs)
+    
     def form_valid(self, form):
         form.instance.user = self.request.user
-        messages.success(self.request, 'Your driver license verification request has been submitted!')
+        messages.success(self.request, 'Ваш запит на верифікацію водійських прав надіслано!')
         return super().form_valid(form)
+
 
 class DriverLicenseVerificationListView(LoginRequiredMixin, ListView):
     """View for listing user's driver license verification requests"""
