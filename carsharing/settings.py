@@ -126,6 +126,9 @@ AUTH_USER_MODEL = 'users.User'
 # login URL
 LOGIN_REDIRECT_URL = '/api/users/profile/'
 
+# logout URL
+LOGOUT_REDIRECT_URL = '/api/users/login/'
+
 # REST Framework settings
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (

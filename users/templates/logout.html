@@ -10,7 +10,11 @@
             Ви успішно вийшли зі свого акаунту.
         </div>
         <p class="lead">Дякуємо за використання MyCarShare!</p>
-        <a href="{% url 'login' %}" class="btn btn-primary mt-3">Увійти знову</a>
+
+        <form method="post" action="{% url 'login' %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-primary mt-3">Увійти знову</button>
+        </form>
     </div>
 </div>
 {% endblock %}

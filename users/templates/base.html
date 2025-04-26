@@ -4,15 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}MyCarShare{% endblock %}</title>
-    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Custom CSS -->
     <style>
         body {
             padding-top: 70px;
             background-color: #f8f9fa;
         }
-        
         .form-container {
             max-width: 800px;
             margin: 0 auto;
@@ -21,12 +18,10 @@
             border-radius: 8px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         }
-        
         .card {
             margin-bottom: 20px;
             box-shadow: 0 0 5px rgba(0, 0, 0, 0.05);
         }
-        
         .profile-img {
             width: 150px;
             height: 150px;
@@ -34,30 +29,24 @@
             border-radius: 50%;
             border: 3px solid #f1f1f1;
         }
-        
         .navbar-brand {
             font-weight: bold;
             color: #4a89dc !important;
         }
-        
         .btn-primary {
             background-color: #4a89dc;
             border-color: #4a89dc;
         }
-        
         .btn-primary:hover {
             background-color: #3976c7;
             border-color: #3976c7;
         }
-        
         .verification-status-pending {
             color: #f0ad4e;
         }
-        
         .verification-status-approved {
             color: #5cb85c;
         }
-        
         .verification-status-rejected {
             color: #d9534f;
         }
@@ -65,15 +54,14 @@
     {% block extra_css %}{% endblock %}
 </head>
 <body>
-    <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-light bg-light fixed-top">
-        <div class="container">
+        <div class="container-fluid px-4">
             <a class="navbar-brand" href="/">MyCarShare</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav">
+                <ul class="navbar-nav me-auto">
                     <li class="nav-item">
                         <a class="nav-link" href="/">Головна</a>
                     </li>
@@ -116,13 +104,17 @@
                     {% endif %}
                     {% endif %}
                 </ul>
-                <ul class="navbar-nav ms-auto">
+
+                <ul class="navbar-nav d-flex align-items-center ms-auto">
                     {% if user.is_authenticated %}
-                    <li class="nav-item">
+                    <li class="nav-item d-flex align-items-center">
                         <span class="nav-link">{{ user.username }}</span>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'logout' %}">Вихід</a>
+                        <form method="post" action="{% url 'logout' %}" class="d-inline ms-2">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-link nav-link" style="padding: 0; background: none; border: none;">
+                                Вийти
+                            </button>
+                        </form>
                     </li>
                     {% else %}
                     <li class="nav-item">
@@ -137,7 +129,6 @@
         </div>
     </nav>
 
-    <!-- Main content -->
     <div class="container mt-4">
         {% if messages %}
             {% for message in messages %}
@@ -151,7 +142,6 @@
         {% block content %}{% endblock %}
     </div>
 
-    <!-- Footer -->
     <footer class="bg-light text-center text-lg-start mt-5">
         <div class="container p-4">
             <div class="row">
@@ -183,10 +173,7 @@
         </div>
     </footer>
 
-    <!-- Bootstrap Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
-    
-    <!-- Custom JavaScript -->
     {% block extra_js %}{% endblock %}
 </body>
 </html>
