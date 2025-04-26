@@ -73,8 +73,8 @@ class Car(models.Model):
     
     # Status and location
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='available')
-    current_latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
-    current_longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    current_latitude = models.CharField(max_length=255, blank=True)
+    current_longitude = models.CharField(max_length=255, blank=True)
     
     # Media
     main_photo = models.ImageField(upload_to='car_photos/')

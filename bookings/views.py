@@ -252,28 +252,39 @@ def start_rental(request):
             user = request.user
             car = form.cleaned_data['car']
             
-            # Create a new booking record
-            now = timezone.now()
+            # Отримуємо координати початку оренди
             pickup_lat = form.cleaned_data.get("latitude")
             pickup_lng = form.cleaned_data.get("longitude")
+            
+            # Створюємо новий запис бронювання
+            now = timezone.now()
+            pickup_location = ""
+            
+            if pickup_lat and pickup_lng:
+                pickup_location = f"{pickup_lat},{pickup_lng}"
+                
+                # Оновлюємо поточне місцезнаходження автомобіля
+                car.current_latitude = str(pickup_lat)
+                car.current_longitude = str(pickup_lng)
+                car.save()
 
             booking = Booking.objects.create(
                 user=user,
                 car=car,
                 start_time=now,
-                end_time=None,
+                end_time=now + datetime.timedelta(days=1),  # Тимчасово на 24 години
                 status='active',
                 last_billing_time=now,
                 minutes_billed=0,
                 total_price=Decimal('0.00'),
-                pickup_location=f"{pickup_lat},{pickup_lng}" if pickup_lat and pickup_lng else ""
+                pickup_location=pickup_location
             )
             
             # Create a history record
             BookingHistory.objects.create(
                 booking=booking,
                 status='active',
-                notes="Оренда розпочата"
+                notes="Оренду розпочато"
             )
             
             # Update car status
@@ -307,30 +318,39 @@ def end_rental(request, pk):
             # End the rental
             now = timezone.now()
             
+            # Отримуємо координати повернення автомобіля
             return_lat = form.cleaned_data.get("latitude")
             return_lng = form.cleaned_data.get("longitude")
-            if return_lat and return_lng:
-                booking.return_location = f"{return_lat},{return_lng}"
             
-            # Calculate the last billing
+            if return_lat and return_lng:
+                # Оновлюємо місцезнаходження в записі бронювання
+                booking.return_location = f"{return_lat},{return_lng}"
+                
+                # Оновлюємо поточне місцезнаходження автомобіля
+                car = booking.car
+                car.current_latitude = str(return_lat)
+                car.current_longitude = str(return_lng)
+                car.save()
+            
+            # Розрахунок останнього списання
             time_diff = now - booking.last_billing_time
             minutes_to_bill = max(1, int(time_diff.total_seconds() / 60))
             
             if minutes_to_bill > 0:
                 amount_to_bill = booking.car.price_per_minute * Decimal(str(minutes_to_bill))
                 
-                # Deduct money
+                # Зняття коштів
                 try:
                     balance = booking.user.balance
                     if balance.amount >= amount_to_bill:
                         balance.amount -= amount_to_bill
                         balance.save()
                         
-                        # Create transaction record
+                        # Створення запису транзакції
                         try:
                             from payments.models import Payment, PaymentTransaction
                             
-                            # Create a booking payment record
+                            # Створення запису оплати бронювання
                             payment = Payment.objects.create(
                                 user=booking.user,
                                 amount=amount_to_bill,
@@ -350,7 +370,7 @@ def end_rental(request, pk):
                         except ImportError:
                             pass
                 except:
-                    pass  # Якщо немає балансу, просто завершуємо оренду
+                    pass  # Якщо недостатньо коштів, просто завершуємо оренду
                 
                 booking.minutes_billed += minutes_to_bill
             
@@ -364,7 +384,7 @@ def end_rental(request, pk):
             BookingHistory.objects.create(
                 booking=booking,
                 status='completed',
-                notes=f"Оренда завершена. Усього хвилин: {booking.minutes_billed}, загальна вартість: {booking.total_price} ₴"
+                notes=f"Оренду завершено. Всього хвилин: {booking.minutes_billed}, загальна вартість: {booking.total_price} ₴"
             )
             
             # Update car status
@@ -373,9 +393,9 @@ def end_rental(request, pk):
             car.save()
             
             messages.success(request, (
-                f"Оренда успішно завершена. "
-                f"Усього використано: {booking.minutes_billed} хвилин. "
-                f"Підсумкова вартість: {booking.total_price} ₴"
+                f"Оренду успішно завершено. "
+                f"Всього використано: {booking.minutes_billed} хвилин. "
+                f"Загальна вартість: {booking.total_price} ₴"
             ))
             return redirect('booking-list')
     else:
