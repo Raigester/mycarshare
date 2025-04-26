@@ -1,0 +1,156 @@
+{% extends 'base.html' %}
+
+{% block title %}Створення бронювання - MyCarShare{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <h2 class="mb-4">Створення бронювання</h2>
+    
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h4 class="mb-0">Оберіть автомобіль та період</h4>
+        </div>
+        <div class="card-body">
+            <form method="post" novalidate>
+                {% csrf_token %}
+                
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {% for error in form.non_field_errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                
+                <div class="row mb-4">
+                    <div class="col-md-12 mb-3">
+                        <label for="{{ form.car.id_for_label }}" class="form-label">Автомобіль</label>
+                        {{ form.car }}
+                        {% if form.car.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.car.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <div class="form-text">Оберіть автомобіль для бронювання</div>
+                    </div>
+                </div>
+                
+                <div class="row mb-4">
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.start_time.id_for_label }}" class="form-label">Дата та час початку</label>
+                        {{ form.start_time }}
+                        {% if form.start_time.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.start_time.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <div class="form-text">Вкажіть, коли ви хочете почати оренду</div>
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.end_time.id_for_label }}" class="form-label">Дата та час завершення</label>
+                        {{ form.end_time }}
+                        {% if form.end_time.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.end_time.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <div class="form-text">Вкажіть, коли ви плануєте повернути автомобіль</div>
+                    </div>
+                </div>
+                
+                <div class="row mb-4">
+                    <div class="col-md-6 mb-3">
+                        <div class="form-check">
+                            {{ form.additional_driver }}
+                            <label class="form-check-label" for="{{ form.additional_driver.id_for_label }}">Додатковий водій</label>
+                        </div>
+                        {% if form.additional_driver.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.additional_driver.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                        <div class="form-check">
+                            {{ form.baby_seat }}
+                            <label class="form-check-label" for="{{ form.baby_seat.id_for_label }}">Дитяче крісло</label>
+                        </div>
+                        {% if form.baby_seat.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.baby_seat.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="alert alert-info mb-4">
+                    <h5 class="alert-heading">Умови бронювання</h5>
+                    <ul>
+                        <li>Мінімальний час бронювання - 1 година</li>
+                        <li>Вартість буде розрахована автоматично на основі обраних параметрів</li>
+                        <li>Бронювання має бути підтверджене адміністратором</li>
+                        <li>Скасування бронювання можливе до його початку</li>
+                    </ul>
+                </div>
+                
+                <div class="d-flex justify-content-between">
+                    <button type="submit" class="btn btn-primary">Створити бронювання</button>
+                    <a href="{% url 'booking-list' %}" class="btn btn-outline-secondary">Скасувати</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const carSelect = document.getElementById('{{ form.car.id_for_label }}');
+        const startTimeInput = document.getElementById('{{ form.start_time.id_for_label }}');
+        const endTimeInput = document.getElementById('{{ form.end_time.id_for_label }}');
+        
+        // Встановлення мінімальних значень часу
+        const now = new Date();
+        const minDateStr = now.toISOString().slice(0, 16);
+        
+        startTimeInput.setAttribute('min', minDateStr);
+        endTimeInput.setAttribute('min', minDateStr);
+        
+        // Обробка зміни часу початку
+        startTimeInput.addEventListener('change', function() {
+            if (startTimeInput.value) {
+                // Встановлення мінімального часу завершення на годину пізніше початку
+                const startDate = new Date(startTimeInput.value);
+                startDate.setHours(startDate.getHours() + 1);
+                const minEndDateStr = startDate.toISOString().slice(0, 16);
+                
+                endTimeInput.setAttribute('min', minEndDateStr);
+                
+                // Якщо час завершення раніше мінімально допустимого, оновлюємо його
+                if (endTimeInput.value && new Date(endTimeInput.value) < startDate) {
+                    endTimeInput.value = minEndDateStr;
+                }
+            }
+        });
+        
+        // Ініціалізація при завантаженні
+        if (startTimeInput.value) {
+            const event = new Event('change');
+            startTimeInput.dispatchEvent(event);
+        }
+    });
+</script>
+{% endblock %}

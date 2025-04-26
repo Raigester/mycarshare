@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+
+{% block title %}Активні поїздки - MyCarShare{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <h2 class="mb-4">Активні поїздки</h2>
+    
+    <div class="alert alert-info mb-4">
+        <p><i class="bi bi-info-circle"></i> Тут відображаються всі поточні активні поїздки. Після завершення поїздки автомобіль стане доступним для інших користувачів.</p>
+    </div>
+    
+    {% if bookings %}
+        <div class="row">
+            {% for booking in bookings %}
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="mb-0">{{ booking.car.model.brand.name }} {{ booking.car.model.name }}</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4 text-center mb-3 mb-md-0">
+                                    {% if booking.car.main_photo %}
+                                        <img src="{{ booking.car.main_photo.url }}" alt="{{ booking.car.model.brand.name }} {{ booking.car.model.name }}" class="img-fluid rounded" style="max-height: 100px;">
+                                    {% else %}
+                                        <div class="bg-light p-4 rounded" style="height: 100px; display: flex; align-items: center; justify-content: center;">
+                                            <p class="text-muted mb-0">Фото недоступне</p>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-8">
+                                    <p><strong>Користувач:</strong> {{ booking.user.get_full_name|default:booking.user.username }}</p>
+                                    <p><strong>Держ. номер:</strong> {{ booking.car.license_plate }}</p>
+                                    <p><strong>Початок:</strong> {{ booking.start_time|date:"d.m.Y H:i" }}</p>
+                                    
+                                    {% if booking.minutes_billed %}
+                                    <p><strong>Списано хвилин:</strong> {{ booking.minutes_billed }}</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <hr>
+                            
+                            <div class="d-grid gap-2">
+                                <a href="{% url 'booking-detail' booking.id %}" class="btn btn-primary">Перегляд деталей</a>
+                                {% if user.is_staff or user == booking.user %}
+                                    <a href="{% url 'end-rental' booking.id %}" class="btn btn-warning">Завершити поїздку</a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-warning">
+            Активних поїздок немає.
+        </div>
+    {% endif %}
+    
+    <div class="mt-4">
+        <a href="{% url 'booking-list' %}" class="btn btn-outline-primary">Усі бронювання</a>
+        <a href="{% url 'start-rental' %}" class="btn btn-success">Розпочати нову оренду</a>
+    </div>
+</div>
+{% endblock %}

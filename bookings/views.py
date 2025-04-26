@@ -1,287 +1,480 @@
 from decimal import Decimal
-from rest_framework import viewsets, permissions, filters, status
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from django_filters.rest_framework import DjangoFilterBackend
+import datetime
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.views.generic import ListView, DetailView, CreateView, UpdateView, FormView, View
+from django.urls import reverse_lazy, reverse
 from django.utils import timezone
+from django.contrib import messages
+from django.db.models import Q
+from django.http import HttpResponseForbidden
+
+from users.models import UserBalance
+from payments.models import PaymentTransaction
 from .models import Booking, BookingHistory
-from .serializers import BookingSerializer, BookingHistorySerializer
-from cars.models import Car
+from .forms import (
+    BookingCreateForm, BookingUpdateForm, BookingCancelForm, 
+    BookingStartRentalForm, BookingEndRentalForm, AdminBookingStatusForm,
+    BookingFilterForm
+)
 
-class BookingPermission(permissions.BasePermission):
-    """Custom permissions for bookings"""
-    
-    def has_object_permission(self, request, view, obj):
-        # Allow admins to perform any actions
-        if request.user.is_staff:
-            return True
-        
-        # Users can view and update only their own bookings
-        return obj.user == request.user
-
-class BookingViewSet(viewsets.ModelViewSet):
-    """API for bookings"""
-    
-    queryset = Booking.objects.all()
-    serializer_class = BookingSerializer
-    permission_classes = [permissions.IsAuthenticated, BookingPermission]
-    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
-    filterset_fields = ['status', 'car', 'start_time', 'end_time']
-    ordering_fields = ['start_time', 'end_time', 'created_at', 'total_price']
+class BookingListView(LoginRequiredMixin, ListView):
+    """View for listing user's bookings"""
+    model = Booking
+    template_name = 'bookings/booking_list.html'
+    context_object_name = 'bookings'
+    paginate_by = 10
     
     def get_queryset(self):
-        # Admins see all bookings, regular users see only their own
+        """Get filtered bookings for the current user or all for admin"""
         user = self.request.user
-        if not user or not user.is_authenticated:
-            return Booking.objects.none()
+        
+        # Base queryset - user's bookings or all for admin
+        if user.is_staff:
+            queryset = Booking.objects.all()
+        else:
+            queryset = Booking.objects.filter(user=user)
+        
+        # Apply filters if form submitted
+        form = BookingFilterForm(self.request.GET)
+        if form.is_valid():
+            # Filter by status
+            if form.cleaned_data.get('status'):
+                queryset = queryset.filter(status=form.cleaned_data['status'])
+            
+            # Filter by car
+            if form.cleaned_data.get('car'):
+                queryset = queryset.filter(car=form.cleaned_data['car'])
+            
+            # Filter by date range
+            if form.cleaned_data.get('date_from'):
+                date_from = form.cleaned_data['date_from']
+                queryset = queryset.filter(
+                    Q(start_time__date__gte=date_from) | Q(end_time__date__gte=date_from)
+                )
+                
+            if form.cleaned_data.get('date_to'):
+                date_to = form.cleaned_data['date_to']
+                queryset = queryset.filter(
+                    Q(start_time__date__lte=date_to) | Q(end_time__date__lte=date_to)
+                )
+                
+        return queryset.order_by('-created_at')
+    
+    def get_context_data(self, **kwargs):
+        """Add booking stats and filter form to context"""
+        context = super().get_context_data(**kwargs)
+        user = self.request.user
+        
+        # Add filter form
+        context['filter_form'] = BookingFilterForm(self.request.GET)
+        
+        # Add booking statistics
+        if user.is_staff:
+            bookings = Booking.objects.all()
+        else:
+            bookings = Booking.objects.filter(user=user)
+        
+        context['total_bookings'] = bookings.count()
+        context['active_bookings'] = bookings.filter(status='active').count()
+        context['upcoming_bookings'] = bookings.filter(
+            status__in=['pending', 'confirmed'],
+            start_time__gt=timezone.now()
+        ).count()
+        context['completed_bookings'] = bookings.filter(status='completed').count()
+        
+        # Get active and upcoming bookings for quick access
+        now = timezone.now()
+        context['user_active_bookings'] = bookings.filter(
+            status='active',
+            start_time__lte=now,
+            end_time__gte=now
+        )
+        
+        context['user_upcoming_bookings'] = bookings.filter(
+            status__in=['pending', 'confirmed'],
+            start_time__gt=now
+        ).order_by('start_time')[:5]
+        
+        return context
+
+class BookingDetailView(LoginRequiredMixin, DetailView):
+    """View for booking details"""
+    model = Booking
+    template_name = 'bookings/booking_detail.html'
+    context_object_name = 'booking'
+    
+    def get_queryset(self):
+        """Ensure users can only see their own bookings unless they're staff"""
+        user = self.request.user
         if user.is_staff:
             return Booking.objects.all()
         return Booking.objects.filter(user=user)
     
-    @action(detail=True, methods=['post'])
-    def cancel(self, request, pk=None):
-        """Cancel a booking"""
+    def get_context_data(self, **kwargs):
+        """Add booking history to context"""
+        context = super().get_context_data(**kwargs)
         booking = self.get_object()
         
-        # Check if cancellation is possible
-        if booking.status in ['completed', 'cancelled']:
-            return Response(
-                {"error": "Cannot cancel a completed or already cancelled booking"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        # Get booking history
+        context['history'] = BookingHistory.objects.filter(booking=booking).order_by('-timestamp')
         
+        # Check if booking can be cancelled
+        context['can_cancel'] = booking.status in ['pending', 'confirmed']
+        
+        # Check if booking is active
+        context['is_active'] = booking.status == 'active'
+        
+        # Calculate booking duration
         if booking.status == 'active':
-            return Response(
-                {"error": "Cannot cancel an active booking. Please contact support"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        # Cancel the booking
-        booking.status = 'cancelled'
-        booking.save()
-        
-        # Create a history record
-        BookingHistory.objects.create(
-            booking=booking,
-            status='cancelled',
-            notes="Booking cancelled by user"
-        )
-        
-        # Update car status
-        car = booking.car
-        car.status = 'available'
-        car.save()
-        
-        return Response({"message": "Booking successfully cancelled"})
-    
-    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAdminUser])
-    def change_status(self, request, pk=None):
-        """Change booking status (admin only)"""
-        booking = self.get_object()
-        new_status = request.data.get('status')
-        
-        if new_status not in [choice[0] for choice in Booking.STATUS_CHOICES]:
-            return Response(
-                {"error": "Invalid status"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        # Change booking status
-        old_status = booking.status
-        booking.status = new_status
-        booking.save()
-        
-        # Create a history record
-        BookingHistory.objects.create(
-            booking=booking,
-            status=new_status,
-            notes=f"Status changed from {old_status} to {new_status} by admin"
-        )
-        
-        # Update car status
-        car = booking.car
-        if new_status == 'active':
-            car.status = 'busy'
-        elif new_status in ['completed', 'cancelled']:
-            car.status = 'available'
-        car.save()
-        
-        return Response({"message": f"Status changed to {new_status}"})
-    
-    @action(detail=True, methods=['get'])
-    def history(self, request, pk=None):
-        """Get booking history"""
-        booking = self.get_object()
-        history = BookingHistory.objects.filter(booking=booking).order_by('-timestamp')
-        serializer = BookingHistorySerializer(history, many=True)
-        return Response(serializer.data)
-    
-    @action(detail=False, methods=['get'])
-    def active(self, request):
-        """Get active bookings"""
-        now = timezone.now()
-        if request.user.is_staff:
-            bookings = Booking.objects.filter(
-                status='active',
-                start_time__lte=now,
-                end_time__gte=now
-            )
-        else:
-            bookings = Booking.objects.filter(
-                user=request.user,
-                status='active',
-                start_time__lte=now,
-                end_time__gte=now
-            )
-        
-        serializer = self.get_serializer(bookings, many=True)
-        return Response(serializer.data)
-    
-    @action(detail=False, methods=['get'])
-    def upcoming(self, request):
-        """Get upcoming bookings"""
-        now = timezone.now()
-        if request.user.is_staff:
-            bookings = Booking.objects.filter(
-                status__in=['pending', 'confirmed'],
-                start_time__gt=now
-            ).order_by('start_time')
-        else:
-            bookings = Booking.objects.filter(
-                user=request.user,
-                status__in=['pending', 'confirmed'],
-                start_time__gt=now
-            ).order_by('start_time')
-        
-        serializer = self.get_serializer(bookings, many=True)
-        return Response(serializer.data)
-    
-    @action(detail=False, methods=['post'])
-    def start_rental(self, request):
-        """Start car rental"""
-        user = request.user
-        car_id = request.data.get('car')
-        
-        try:
-            car = Car.objects.get(id=car_id, status='available')
-        except Car.DoesNotExist:
-            return Response(
-                {"error": "Car not available"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        # Check user's balance
-        try:
-            balance = user.balance
-            min_required = car.price_per_minute * Decimal('60')  # Minimum for 1 hour
+            # For active bookings, calculate from start time to now
+            now = timezone.now()
+            duration = now - booking.start_time
+            hours = duration.total_seconds() / 3600
+            context['current_duration_hours'] = round(hours, 1)
             
-            if balance.amount < min_required:
-                return Response(
-                    {"error": f"Insufficient balance. Minimum required: {min_required}"},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-        except:
-            return Response(
-                {"error": "User has no balance"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            # Estimated cost so far
+            if booking.minutes_billed > 0:
+                context['current_cost'] = booking.car.price_per_minute * Decimal(str(booking.minutes_billed))
+            else:
+                context['current_cost'] = Decimal('0.00')
         
-        # Create a new booking record
-        now = timezone.now()
-        pickup_lat = request.data.get("latitude")
-        pickup_lng = request.data.get("longitude")
+        return context
 
-        booking = Booking.objects.create(
-            user=user,
-            car=car,
-            start_time=now + timezone.timedelta(seconds=1),
-            end_time=now + timezone.timedelta(days=1),
-            status='active',
-            last_billing_time=now,
-            minutes_billed=0,
-            total_price=Decimal('0.00'),
-            pickup_location=f"{pickup_lat},{pickup_lng}" if pickup_lat and pickup_lng else ""
-        )
+class BookingCreateView(LoginRequiredMixin, CreateView):
+    """View for creating a new booking"""
+    model = Booking
+    form_class = BookingCreateForm
+    template_name = 'bookings/booking_form.html'
+    success_url = reverse_lazy('booking-list')
+    
+    def get_form_kwargs(self):
+        """Pass the current user to the form"""
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
+    
+    def form_valid(self, form):
+        """Process the valid form data"""
+        booking = form.instance
+        booking.user = self.request.user
+        booking.total_price = form.calculated_price
+        booking.status = 'pending'
         
-        # Create a history record
+        messages.success(self.request, 'Бронювання успішно створено та очікує підтвердження.')
+        return super().form_valid(form)
+
+class BookingUpdateView(LoginRequiredMixin, UpdateView):
+    """View for updating a booking"""
+    model = Booking
+    form_class = BookingUpdateForm
+    template_name = 'bookings/booking_update.html'
+    
+    def get_queryset(self):
+        """Ensure users can only update their own bookings in pending/confirmed status"""
+        user = self.request.user
+        if user.is_staff:
+            return Booking.objects.filter(status__in=['pending', 'confirmed'])
+        return Booking.objects.filter(
+            user=user,
+            status__in=['pending', 'confirmed']
+        )
+    
+    def get_success_url(self):
+        """Return to booking detail page after update"""
+        return reverse('booking-detail', kwargs={'pk': self.object.pk})
+    
+    def form_valid(self, form):
+        """Process the valid form data"""
+        booking = form.instance
+        booking.total_price = form.calculated_price
+        
+        # Create history record
         BookingHistory.objects.create(
             booking=booking,
-            status='active',
-            notes="Rental started"
+            status=booking.status,
+            notes="Бронювання оновлено користувачем"
         )
         
-        # Update car status
-        car.status = 'busy'
-        car.save()
-        
-        return Response({
-            "message": "Rental successfully started",
-            "booking_id": booking.id
+        messages.success(self.request, 'Бронювання успішно оновлено.')
+        return super().form_valid(form)
+
+@login_required
+def cancel_booking(request, pk):
+    """Cancel a booking"""
+    booking = get_object_or_404(Booking, pk=pk)
+    
+    # Check permissions
+    if not request.user.is_staff and booking.user != request.user:
+        return HttpResponseForbidden("У вас немає доступу до цього бронювання.")
+    
+    # Check if cancellation is possible
+    if booking.status not in ['pending', 'confirmed']:
+        messages.error(request, "Це бронювання не можна скасувати.")
+        return redirect('booking-detail', pk=booking.pk)
+    
+    if request.method == 'POST':
+        form = BookingCancelForm(request.POST)
+        if form.is_valid():
+            # Cancel the booking
+            booking.status = 'cancelled'
+            booking.save()
+            
+            # Create a history record
+            BookingHistory.objects.create(
+                booking=booking,
+                status='cancelled',
+                notes="Бронювання скасовано користувачем"
+            )
+            
+            # Update car status if needed
+            if booking.car.status == 'busy':
+                booking.car.status = 'available'
+                booking.car.save()
+            
+            messages.success(request, "Бронювання успішно скасовано.")
+            return redirect('booking-list')
+    else:
+        form = BookingCancelForm()
+    
+    return render(request, 'bookings/cancel_booking.html', {
+        'booking': booking,
+        'form': form
+    })
+
+@login_required
+def start_rental(request):
+    """Start a car rental"""
+    if request.method == 'POST':
+        form = BookingStartRentalForm(request.POST, user=request.user)
+        if form.is_valid():
+            user = request.user
+            car = form.cleaned_data['car']
+            
+            # Create a new booking record
+            now = timezone.now()
+            pickup_lat = form.cleaned_data.get("latitude")
+            pickup_lng = form.cleaned_data.get("longitude")
+
+            booking = Booking.objects.create(
+                user=user,
+                car=car,
+                start_time=now,
+                end_time=None,
+                status='active',
+                last_billing_time=now,
+                minutes_billed=0,
+                total_price=Decimal('0.00'),
+                pickup_location=f"{pickup_lat},{pickup_lng}" if pickup_lat and pickup_lng else ""
+            )
+            
+            # Create a history record
+            BookingHistory.objects.create(
+                booking=booking,
+                status='active',
+                notes="Оренда розпочата"
+            )
+            
+            # Update car status
+            car.status = 'busy'
+            car.save()
+            
+            messages.success(request, f"Оренда автомобіля {car} успішно розпочата!")
+            return redirect('booking-detail', pk=booking.id)
+    else:
+        form = BookingStartRentalForm(user=request.user)
+    
+    return render(request, 'bookings/start_rental.html', {'form': form})
+
+@login_required
+def end_rental(request, pk):
+    """End a car rental"""
+    booking = get_object_or_404(Booking, pk=pk)
+    
+    # Check permissions
+    if not request.user.is_staff and booking.user != request.user:
+        return HttpResponseForbidden("У вас немає доступу до цього бронювання.")
+    
+    # Check if rental is active
+    if booking.status != 'active':
+        messages.error(request, "Ця оренда не є активною.")
+        return redirect('booking-detail', pk=booking.pk)
+    
+    if request.method == 'POST':
+        form = BookingEndRentalForm(request.POST)
+        if form.is_valid():
+            # End the rental
+            now = timezone.now()
+            
+            return_lat = form.cleaned_data.get("latitude")
+            return_lng = form.cleaned_data.get("longitude")
+            if return_lat and return_lng:
+                booking.return_location = f"{return_lat},{return_lng}"
+            
+            # Calculate the last billing
+            time_diff = now - booking.last_billing_time
+            minutes_to_bill = max(1, int(time_diff.total_seconds() / 60))
+            
+            if minutes_to_bill > 0:
+                amount_to_bill = booking.car.price_per_minute * Decimal(str(minutes_to_bill))
+                
+                # Deduct money
+                try:
+                    balance = booking.user.balance
+                    if balance.amount >= amount_to_bill:
+                        balance.amount -= amount_to_bill
+                        balance.save()
+                        
+                        # Create transaction record
+                        try:
+                            from payments.models import Payment, PaymentTransaction
+                            
+                            # Create a booking payment record
+                            payment = Payment.objects.create(
+                                user=booking.user,
+                                amount=amount_to_bill,
+                                payment_provider='internal',
+                                status='completed',
+                                provider_payment_id=f'booking-{booking.id}'
+                            )
+                            
+                            PaymentTransaction.objects.create(
+                                user=booking.user,
+                                payment=payment,
+                                amount=amount_to_bill,
+                                transaction_type='booking',
+                                description=f"Оплата оренди автомобіля {booking.car}",
+                                balance_after=balance.amount
+                            )
+                        except ImportError:
+                            pass
+                except:
+                    pass  # Якщо немає балансу, просто завершуємо оренду
+                
+                booking.minutes_billed += minutes_to_bill
+            
+            # Update booking data
+            booking.status = 'completed'
+            booking.end_time = now
+            booking.total_price = booking.car.price_per_minute * Decimal(str(booking.minutes_billed))
+            booking.save()
+            
+            # Create a history record
+            BookingHistory.objects.create(
+                booking=booking,
+                status='completed',
+                notes=f"Оренда завершена. Усього хвилин: {booking.minutes_billed}, загальна вартість: {booking.total_price} ₴"
+            )
+            
+            # Update car status
+            car = booking.car
+            car.status = 'available'
+            car.save()
+            
+            messages.success(request, (
+                f"Оренда успішно завершена. "
+                f"Усього використано: {booking.minutes_billed} хвилин. "
+                f"Підсумкова вартість: {booking.total_price} ₴"
+            ))
+            return redirect('booking-list')
+    else:
+        form = BookingEndRentalForm()
+    
+    return render(request, 'bookings/end_rental.html', {
+        'booking': booking,
+        'form': form
+    })
+
+class AdminBookingChangeStatusView(UserPassesTestMixin, View):
+    """Admin view for changing booking status"""
+    
+    def test_func(self):
+        """Only allow staff access"""
+        return self.request.user.is_staff
+    
+    def get(self, request, pk):
+        booking = get_object_or_404(Booking, pk=pk)
+        form = AdminBookingStatusForm(initial={'status': booking.status})
+        return render(request, 'bookings/admin_change_status.html', {
+            'booking': booking,
+            'form': form
         })
     
-    @action(detail=True, methods=['post'])
-    def end_rental(self, request, pk=None):
-        """End car rental"""
-        booking = self.get_object()
+    def post(self, request, pk):
+        booking = get_object_or_404(Booking, pk=pk)
+        form = AdminBookingStatusForm(request.POST)
         
-        if booking.user != request.user and not request.user.is_staff:
-            return Response(
-                {"error": "You can only end your own rentals"},
-                status=status.HTTP_403_FORBIDDEN
-            )
-        
-        if booking.status != 'active':
-            return Response(
-                {"error": "Booking is not active"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        # End the rental
-        now = timezone.now()
-        
-        return_lat = request.data.get("latitude")
-        return_lng = request.data.get("longitude")
-        if return_lat and return_lng:
-            booking.return_location = f"{return_lat},{return_lng}"
-        
-        # Calculate the last billing
-        time_diff = now - booking.last_billing_time
-        minutes_to_bill = max(1, int(time_diff.total_seconds() / 60))
-        
-        if minutes_to_bill > 0:
-            amount_to_bill = booking.car.price_per_minute * Decimal(str(minutes_to_bill))
+        if form.is_valid():
+            new_status = form.cleaned_data['status']
+            notes = form.cleaned_data['notes'] or f"Статус змінено адміністратором з {booking.status} на {new_status}"
             
-            # Deduct money
-            try:
-                balance = booking.user.balance
-                if balance.amount >= amount_to_bill:
-                    balance.amount -= amount_to_bill
-                    balance.save()
-            except:
-                pass  # If no balance, just end the rental
+            # Change booking status
+            old_status = booking.status
+            booking.status = new_status
+            booking.save()
             
-            booking.minutes_billed += minutes_to_bill
+            # Create a history record
+            BookingHistory.objects.create(
+                booking=booking,
+                status=new_status,
+                notes=notes
+            )
+            
+            # Update car status
+            car = booking.car
+            if new_status == 'active':
+                car.status = 'busy'
+            elif new_status in ['completed', 'cancelled']:
+                car.status = 'available'
+            car.save()
+            
+            messages.success(request, f"Статус бронювання змінено на {new_status}")
+            return redirect('booking-detail', pk=booking.pk)
         
-        # Update booking data
-        booking.status = 'completed'
-        booking.end_time = now
-        booking.total_price = booking.car.price_per_minute * Decimal(str(booking.minutes_billed))
-        booking.save()
-        
-        # Create a history record
-        BookingHistory.objects.create(
-            booking=booking,
-            status='completed',
-            notes=f"Rental ended. Total minutes: {booking.minutes_billed}, total price: {booking.total_price}"
-        )
-        
-        # Update car status
-        car = booking.car
-        car.status = 'available'
-        car.save()
-        
-        return Response({
-            "message": "Rental successfully ended",
-            "total_time": f"{booking.minutes_billed} minutes",
-            "total_price": str(booking.total_price)
+        return render(request, 'bookings/admin_change_status.html', {
+            'booking': booking,
+            'form': form
         })
+
+class ActiveBookingsView(LoginRequiredMixin, ListView):
+    """View for active bookings"""
+    model = Booking
+    template_name = 'bookings/active_bookings.html'
+    context_object_name = 'bookings'
+    
+    def get_queryset(self):
+        now = timezone.now()
+        if self.request.user.is_staff:
+            return Booking.objects.filter(
+                status='active',
+                start_time__lte=now,
+                end_time__gte=now
+            ).order_by('end_time')
+        else:
+            return Booking.objects.filter(
+                user=self.request.user,
+                status='active',
+                start_time__lte=now,
+                end_time__gte=now
+            ).order_by('end_time')
+
+class UpcomingBookingsView(LoginRequiredMixin, ListView):
+    """View for upcoming bookings"""
+    model = Booking
+    template_name = 'bookings/upcoming_bookings.html'
+    context_object_name = 'bookings'
+    
+    def get_queryset(self):
+        now = timezone.now()
+        if self.request.user.is_staff:
+            return Booking.objects.filter(
+                status__in=['pending', 'confirmed'],
+                start_time__gt=now
+            ).order_by('start_time')
+        else:
+            return Booking.objects.filter(
+                user=self.request.user,
+                status__in=['pending', 'confirmed'],
+                start_time__gt=now
+            ).order_by('start_time')

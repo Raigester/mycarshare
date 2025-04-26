@@ -93,6 +93,19 @@
                             <li><a class="dropdown-item" href="{% url 'create-payment' %}">Поповнити баланс</a></li>
                         </ul>
                     </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownBookings" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            Бронювання
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="navbarDropdownBookings">
+                            <li><a class="dropdown-item" href="{% url 'booking-list' %}">Мої бронювання</a></li>
+                            <li><a class="dropdown-item" href="{% url 'active-bookings' %}">Активні поїздки</a></li>
+                            <li><a class="dropdown-item" href="{% url 'upcoming-bookings' %}">Майбутні</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{% url 'booking-create' %}">Забронювати</a></li>
+                            <li><a class="dropdown-item" href="{% url 'start-rental' %}">Почати оренду</a></li>
+                        </ul>
+                    </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'verification-list' %}">Верифікація</a>
                     </li>

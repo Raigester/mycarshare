@@ -1,0 +1,140 @@
+{% extends 'base.html' %}
+
+{% block title %}Розпочати оренду - MyCarShare{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <h2 class="mb-4">Розпочати оренду автомобіля</h2>
+    
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h4 class="mb-0">Оберіть автомобіль</h4>
+        </div>
+        <div class="card-body">
+            <form method="post" novalidate id="start-rental-form">
+                {% csrf_token %}
+                
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {% for error in form.non_field_errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                
+                <div class="mb-4">
+                    <label for="{{ form.car.id_for_label }}" class="form-label">Доступні автомобілі</label>
+                    {{ form.car }}
+                    {% if form.car.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.car.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    <div class="form-text">Оберіть автомобіль для початку оренди</div>
+                </div>
+                
+                {{ form.latitude }}
+                {{ form.longitude }}
+                
+                <div class="alert alert-info mb-4">
+                    <h5 class="alert-heading">Інформація про оренду</h5>
+                    <ul>
+                        <li>Під час початку оренди з вашого балансу буде списуватись вартість оренди за хвилинами</li>
+                        <li>Переконайтеся, що на вашому балансі достатньо коштів</li>
+                        <li>Не забудьте завершити оренду після використання автомобіля</li>
+                        <li>У разі недостатнього балансу оренда буде автоматично завершена</li>
+                    </ul>
+                </div>
+                
+                <div id="map" style="height: 300px;" class="mb-4 rounded border"></div>
+                
+                <div class="mb-4">
+                    <div class="form-check">
+                        {{ form.confirm_start }}
+                        <label class="form-check-label" for="{{ form.confirm_start.id_for_label }}">{{ form.confirm_start.label }}</label>
+                        {% if form.confirm_start.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.confirm_start.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="d-flex justify-content-between">
+                    <button type="submit" class="btn btn-success" id="start-button">Розпочати оренду</button>
+                    <a href="{% url 'booking-list' %}" class="btn btn-outline-secondary">Скасувати</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&libraries=places"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const latitudeInput = document.getElementById('{{ form.latitude.id_for_label }}');
+        const longitudeInput = document.getElementById('{{ form.longitude.id_for_label }}');
+        const carSelect = document.getElementById('{{ form.car.id_for_label }}');
+        const startButton = document.getElementById('start-button');
+        
+        // Ініціалізація карти з центром у Києві
+        const defaultPosition = { lat: 50.4501, lng: 30.5234 };
+        const map = new google.maps.Map(document.getElementById('map'), {
+            center: defaultPosition,
+            zoom: 12
+        });
+        
+        // Маркер для поточного місцезнаходження
+        let marker = new google.maps.Marker({
+            position: defaultPosition,
+            map: map,
+            title: 'Ваше місцезнаходження',
+            draggable: true
+        });
+        
+        // Отримання поточного місцезнаходження
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    const pos = {
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude
+                    };
+                    
+                    map.setCenter(pos);
+                    marker.setPosition(pos);
+                    
+                    // Заповнення прихованих полів
+                    latitudeInput.value = pos.lat;
+                    longitudeInput.value = pos.lng;
+                },
+                function() {
+                    // Обробка помилки
+                    console.log('Помилка отримання місцезнаходження');
+                }
+            );
+        }
+        
+        // Оновлення координат при перетягуванні маркера
+        google.maps.event.addListener(marker, 'dragend', function() {
+            const pos = marker.getPosition();
+            latitudeInput.value = pos.lat();
+            longitudeInput.value = pos.lng();
+        });
+        
+        // Вимкнення кнопки "Розпочати оренду", якщо автомобіль не обрано
+        carSelect.addEventListener('change', function() {
+            startButton.disabled = !this.value;
+        });
+        
+        // Ініціалізація
+        startButton.disabled = !carSelect.value;
+    });
+</script>
+{% endblock %}

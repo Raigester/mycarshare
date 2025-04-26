@@ -1,3 +1,4 @@
+import datetime
 from django.db import models
 from django.core.exceptions import ValidationError
 from django.utils import timezone
@@ -18,7 +19,7 @@ class Booking(models.Model):
     
     # Booking time
     start_time = models.DateTimeField()
-    end_time = models.DateTimeField()
+    end_time = models.DateTimeField(null=True, blank=True)
     
     # Locations
     pickup_location = models.CharField(max_length=255, blank=True)
@@ -46,24 +47,28 @@ class Booking(models.Model):
         """Model validation"""
         
         # Check that start time is earlier than end time
-        if self.start_time >= self.end_time:
-            raise ValidationError("Start time must be earlier than end time")
+        if self.end_time:
+            if self.start_time >= self.end_time:
+                raise ValidationError("Start time must be earlier than end time")
         
-        # Check that start time is in the future (on creation)
-        if not self.id and self.start_time <= timezone.now():
-            raise ValidationError("Start time must be in the future")
+        # Check only when creating a new booking (if there is no primary key)
+        # Make sure that the rental start time is in the future (with a tolerance of 2 seconds)
+        if self.pk is None:
+            if self.start_time and self.start_time <= timezone.now() - datetime.timedelta(seconds=2):
+                raise ValidationError("Start time must be in the future")
         
         # Check for overlapping bookings in the same period
-        overlapping_bookings = Booking.objects.exclude(id=self.id).filter(
-            car=self.car,
-            status__in=['pending', 'confirmed', 'active'],
-            start_time__lt=self.end_time,
-            end_time__gt=self.start_time
-        )
-        
-        if overlapping_bookings.exists():
-            raise ValidationError("The car is already booked for this period")
-    
+        if self.end_time:
+            overlapping_bookings = Booking.objects.exclude(id=self.id).filter(
+                car=self.car,
+                status__in=['pending', 'confirmed', 'active'],
+                start_time__lt=self.end_time,
+                end_time__gt=self.start_time
+            )
+            
+            if overlapping_bookings.exists():
+                raise ValidationError("The car is already booked for this period")
+
     def save(self, *args, **kwargs):
         # Perform validation before saving
         self.clean()

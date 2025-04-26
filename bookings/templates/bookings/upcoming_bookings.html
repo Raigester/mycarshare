@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+
+{% block title %}Майбутні бронювання - MyCarShare{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <h2 class="mb-4">Майбутні бронювання</h2>
+    
+    <div class="alert alert-info mb-4">
+        <p><i class="bi bi-info-circle"></i> Тут відображаються всі підтверджені та очікуючі підтвердження бронювання на майбутні дати.</p>
+    </div>
+    
+    {% if bookings %}
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Автомобіль</th>
+                        <th>Початок</th>
+                        <th>Закінчення</th>
+                        <th>Статус</th>
+                        <th>Вартість</th>
+                        <th>Дії</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for booking in bookings %}
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    {% if booking.car.main_photo %}
+                                        <img src="{{ booking.car.main_photo.url }}" alt="{{ booking.car.model.brand.name }}" class="img-thumbnail me-2" style="width: 50px; height: 50px; object-fit: cover;">
+                                    {% endif %}
+                                    <div>
+                                        <strong>{{ booking.car.model.brand.name }} {{ booking.car.model.name }}</strong><br>
+                                        <small class="text-muted">{{ booking.car.license_plate }}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>{{ booking.start_time|date:"d.m.Y H:i" }}</td>
+                            <td>{{ booking.end_time|date:"d.m.Y H:i" }}</td>
+                            <td>
+                                {% if booking.status == 'pending' %}
+                                    <span class="badge bg-warning text-dark">Очікує підтвердження</span>
+                                {% elif booking.status == 'confirmed' %}
+                                    <span class="badge bg-info">Підтверджено</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ booking.total_price|floatformat:2 }} ₴</td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'booking-detail' booking.id %}" class="btn btn-outline-primary">Деталі</a>
+                                    {% if booking.status == 'pending' or booking.status == 'confirmed' %}
+                                        <a href="{% url 'booking-update' booking.id %}" class="btn btn-outline-secondary">Змінити</a>
+                                        <a href="{% url 'booking-cancel' booking.id %}" class="btn btn-outline-danger">Скасувати</a>
+                                    {% endif %}
+                                    {% if user.is_staff %}
+                                        <a href="{% url 'admin-change-status' booking.id %}" class="btn btn-outline-info">Статус</a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="alert alert-warning">
+            Майбутніх бронювань немає.
+        </div>
+    {% endif %}
+    
+    <div class="mt-4">
+        <a href="{% url 'booking-list' %}" class="btn btn-outline-primary">Усі бронювання</a>
+        <a href="{% url 'booking-create' %}" class="btn btn-success">Створити бронювання</a>
+    </div>
+</div>
+{% endblock %}
