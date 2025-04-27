@@ -36,9 +36,9 @@ class DriverLicenseVerification(models.Model):
     status = models.CharField(
         max_length=20,
         choices=[
-            ('pending', 'Pending review'),
-            ('approved', 'Approved'),
-            ('rejected', 'Rejected')
+            ('pending', 'На розгляді'),
+            ('approved', 'Схвалено'),
+            ('rejected', 'Відхилено')
         ],
         default='pending'
     )

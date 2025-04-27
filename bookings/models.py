@@ -7,11 +7,11 @@ class Booking(models.Model):
     """Model for car bookings"""
     
     STATUS_CHOICES = [
-        ('pending', 'Pending confirmation'),
-        ('confirmed', 'Confirmed'),
-        ('active', 'Active'),
-        ('completed', 'Completed'),
-        ('cancelled', 'Cancelled')
+        ('pending', 'Очікує підтвердження'),
+        ('confirmed', 'Підтверджено'),
+        ('active', 'Активний'),
+        ('completed', 'Завершено'),
+        ('cancelled', 'Скасовано')
     ]
     
     user = models.ForeignKey('users.User', on_delete=models.CASCADE, related_name='bookings')

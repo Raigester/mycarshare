@@ -27,22 +27,22 @@ class Car(models.Model):
     """Model for cars"""
     
     STATUS_CHOICES = [
-        ('available', 'Available'),
-        ('busy', 'Busy'),
-        ('maintenance', 'Under maintenance'),
-        ('inactive', 'Inactive')
+        ('available', 'Доступний'),
+        ('busy', 'Зайнятий'),
+        ('maintenance', 'На обслуговуванні'),
+        ('inactive', 'Неактивний')
     ]
-    
+
     FUEL_CHOICES = [
-        ('petrol', 'Petrol'),
-        ('diesel', 'Diesel'),
-        ('electric', 'Electric'),
-        ('hybrid', 'Hybrid')
+        ('petrol', 'Бензин'),
+        ('diesel', 'Дизель'),
+        ('electric', 'Електричний'),
+        ('hybrid', 'Гібрид')
     ]
-    
+
     TRANSMISSION_CHOICES = [
-        ('manual', 'Manual'),
-        ('automatic', 'Automatic')
+        ('manual', 'Механічна'),
+        ('automatic', 'Автоматична')
     ]
     
     model = models.ForeignKey(CarModel, on_delete=models.CASCADE, related_name='cars')

@@ -8,10 +8,10 @@ User = get_user_model()
 class Payment(models.Model):
     """Base payment model"""
     PAYMENT_STATUS_CHOICES = (
-        ('pending', _('Pending')),
-        ('completed', _('Completed')),
-        ('failed', _('Failed')),
-        ('cancelled', _('Cancelled')),
+        ('pending', _('Очікується')),
+        ('completed', _('Завершено')),
+        ('failed', _('Помилка')),
+        ('cancelled', _('Скасовано')),
     )
     
     PAYMENT_PROVIDER_CHOICES = (
@@ -41,10 +41,9 @@ class LiqPayPayment(models.Model):
 class PaymentTransaction(models.Model):
     """Model to store transaction history"""
     TRANSACTION_TYPE_CHOICES = (
-        ('deposit', _('Deposit')),
-        ('withdrawal', _('Withdrawal')),
-        ('refund', _('Refund')),
-        ('booking', _('Booking Fee')),
+        ('deposit', _('Поповнення')),
+        ('withdrawal', _('Виведення')),
+        ('booking', _('Плата за бронювання')),
     )
     
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='transactions')

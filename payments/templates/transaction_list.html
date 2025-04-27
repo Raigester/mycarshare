@@ -100,14 +100,12 @@
                                     <span class="badge bg-success">Поповнення</span>
                                 {% elif transaction.transaction_type == 'withdrawal' %}
                                     <span class="badge bg-danger">Списання</span>
-                                {% elif transaction.transaction_type == 'refund' %}
-                                    <span class="badge bg-info">Повернення</span>
                                 {% elif transaction.transaction_type == 'booking' %}
                                     <span class="badge bg-primary">Оренда</span>
                                 {% endif %}
                             </td>
                             <td>
-                                {% if transaction.transaction_type == 'deposit' or transaction.transaction_type == 'refund' %}
+                                {% if transaction.transaction_type == 'deposit' %}
                                     <span class="text-success">+{{ transaction.amount|floatformat:2 }} ₴</span>
                                 {% else %}
                                     <span class="text-danger">-{{ transaction.amount|floatformat:2 }} ₴</span>

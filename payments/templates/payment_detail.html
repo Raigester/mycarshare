@@ -92,8 +92,6 @@
                                         <span class="badge bg-success">Поповнення</span>
                                     {% elif transaction.transaction_type == 'withdrawal' %}
                                         <span class="badge bg-danger">Списання</span>
-                                    {% elif transaction.transaction_type == 'refund' %}
-                                        <span class="badge bg-info">Повернення</span>
                                     {% elif transaction.transaction_type == 'booking' %}
                                         <span class="badge bg-primary">Бронювання</span>
                                     {% endif %}
