@@ -19,6 +19,12 @@ def start_rental(request):
         form = BookingStartRentalForm(request.POST, user=request.user)
         if form.is_valid():
             user = request.user
+
+            latest_verification = user.license_verifications.order_by('-created_at').first()
+            if not latest_verification or latest_verification.status != 'approved':
+                messages.error(request, "Щоб орендувати автомобіль, потрібно пройти верифікацію водійських прав.")
+                return redirect('verification-create')
+
             car = form.cleaned_data['car']
             pickup_lat = form.cleaned_data.get("latitude")
             pickup_lng = form.cleaned_data.get("longitude")
