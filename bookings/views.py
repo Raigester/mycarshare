@@ -20,6 +20,10 @@ def start_rental(request):
         if form.is_valid():
             user = request.user
 
+            if user.is_blocked:
+                messages.error(request, "Ваш обліковий запис заблоковано. Оренда неможлива.")
+                return redirect('booking-list')
+
             latest_verification = user.license_verifications.order_by('-created_at').first()
             if not latest_verification or latest_verification.status != 'approved':
                 messages.error(request, "Щоб орендувати автомобіль, потрібно пройти верифікацію водійських прав.")
