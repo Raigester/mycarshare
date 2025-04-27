@@ -37,6 +37,8 @@ class BookingStartRentalForm(forms.Form):
         
         if car and self.user:
             balance = getattr(self.user, 'balance', None)
+            if not balance:
+                raise ValidationError("Немає коштів на балансі")
             
             min_required = car.price_per_minute * 60
             
