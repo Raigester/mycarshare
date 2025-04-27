@@ -18,17 +18,18 @@ from .forms import (
 
 
 class UserRegistrationView(CreateView):
-    """View for user registration"""
+    """Представлення для реєстрації користувача"""
     form_class = UserRegistrationForm
     template_name = 'register.html'
     success_url = reverse_lazy('login')
     
     def form_valid(self, form):
         user = form.save()
-        messages.success(self.request, 'Account created successfully! You can now log in.')
+        messages.success(self.request, 'Акаунт успішно створено! Тепер ви можете увійти.')
         return super().form_valid(form)
 
 class CustomLoginView(LoginView):
+    """Представлення для входу користувача"""
     template_name = 'login.html'
 
     def dispatch(self, request, *args, **kwargs):
@@ -37,7 +38,7 @@ class CustomLoginView(LoginView):
         return super().dispatch(request, *args, **kwargs)
 
 class UserProfileView(LoginRequiredMixin, UpdateView):
-    """View for user profile"""
+    """Представлення для профілю користувача"""
     model = User
     form_class = UserProfileUpdateForm
     template_name = 'profile.html'
@@ -47,27 +48,28 @@ class UserProfileView(LoginRequiredMixin, UpdateView):
         return self.request.user
     
     def form_valid(self, form):
-        messages.success(self.request, 'Your profile has been updated!')
+        messages.success(self.request, 'Ваш профіль успішно оновлено!')
         return super().form_valid(form)
 
 @login_required
 def change_password_view(request):
-    """View for changing user password"""
+    """Представлення для зміни пароля користувача"""
     if request.method == 'POST':
         form = CustomPasswordChangeForm(request.user, request.POST)
         if form.is_valid():
             user = form.save()
-            update_session_auth_hash(request, user)  # Keep user logged in
-            messages.success(request, 'Your password was successfully updated!')
+            update_session_auth_hash(request, user)  # Залишити користувача в системі
+            messages.success(request, 'Ваш пароль успішно змінено!')
             return redirect('profile')
         else:
-            messages.error(request, 'Please correct the errors below.')
+            messages.error(request, 'Будь ласка, виправте помилки нижче.')
     else:
         form = CustomPasswordChangeForm(request.user)
     
     return render(request, 'change_password.html', {'form': form})
 
 class DriverLicenseVerificationCreateView(LoginRequiredMixin, CreateView):
+    """Представлення для створення запиту на верифікацію водійських прав"""
     model = DriverLicenseVerification
     form_class = DriverLicenseVerificationForm
     template_name = 'driver_verification_form.html'
@@ -91,7 +93,7 @@ class DriverLicenseVerificationCreateView(LoginRequiredMixin, CreateView):
 
 
 class DriverLicenseVerificationListView(LoginRequiredMixin, ListView):
-    """View for listing user's driver license verification requests"""
+    """Представлення для відображення списку запитів на верифікацію водійських прав користувача"""
     model = DriverLicenseVerification
     template_name = 'driver_verification_list.html'
     context_object_name = 'verifications'
@@ -100,6 +102,7 @@ class DriverLicenseVerificationListView(LoginRequiredMixin, ListView):
         return DriverLicenseVerification.objects.filter(user=self.request.user)
 
 class AdminVerificationListView(UserPassesTestMixin, ListView):
+    """Представлення для адміністратора для перегляду запитів на верифікацію"""
     model = DriverLicenseVerification
     template_name = 'admin_verification_list.html'
     context_object_name = 'verifications'
@@ -115,7 +118,7 @@ class AdminVerificationListView(UserPassesTestMixin, ListView):
         return context
 
 class AdminVerificationUpdateView(UserPassesTestMixin, UpdateView):
-    """Admin view for updating a verification request"""
+    """Представлення адміністратора для оновлення запиту на верифікацію"""
     model = DriverLicenseVerification
     form_class = AdminVerificationForm
     template_name = 'admin_verification_detail.html'
@@ -127,21 +130,21 @@ class AdminVerificationUpdateView(UserPassesTestMixin, UpdateView):
     def form_valid(self, form):
         verification = form.save()
         
-        # If verification is approved, update user status
+        # Якщо верифікація схвалена, оновити статус користувача
         if verification.status == 'approved':
             user = verification.user
             user.is_verified_driver = True
             user.save()
-            messages.success(self.request, f'Driver verification for {user.username} approved!')
+            messages.success(self.request, f'Верифікація водія для {user.username} схвалена!')
         elif verification.status == 'rejected':
-            messages.info(self.request, f'Driver verification for {verification.user.username} rejected.')
+            messages.info(self.request, f'Верифікація водія для {verification.user.username} відхилена.')
             
         return super().form_valid(form)
 
 @login_required
 def user_balance_view(request):
-    """View for displaying and adding to user balance"""
-    # Get or create user balance
+    """Представлення для відображення та поповнення балансу користувача"""
+    # Отримати або створити баланс користувача
     balance, created = UserBalance.objects.get_or_create(user=request.user)
     
     if request.method == 'POST':
@@ -150,7 +153,7 @@ def user_balance_view(request):
             amount = form.cleaned_data['amount']
             balance.amount += amount
             balance.save()
-            messages.success(request, f'Successfully added {amount} to your balance!')
+            messages.success(request, f'Успішно додано {amount} до вашого балансу!')
             return redirect('balance')
     else:
         form = BalanceAddForm()

@@ -14,29 +14,29 @@ class Booking(models.Model):
         ('cancelled', 'Скасовано')
     ]
     
-    
-    user = models.ForeignKey('users.User', on_delete=models.CASCADE, related_name='bookings')
-    car = models.ForeignKey('cars.Car', on_delete=models.CASCADE, related_name='bookings')
+    user = models.ForeignKey('users.User', on_delete=models.CASCADE, related_name='bookings')  # Користувач, який створив бронювання
+    car = models.ForeignKey('cars.Car', on_delete=models.CASCADE, related_name='bookings')  # Автомобіль, який заброньовано
     
     # Час бронювання
-    start_time = models.DateTimeField()
-    end_time = models.DateTimeField(null=True, blank=True)
+    start_time = models.DateTimeField()  # Час початку бронювання
+    end_time = models.DateTimeField(null=True, blank=True)  # Час завершення бронювання (може бути порожнім)
     
     # Локації
-    pickup_location = models.CharField(max_length=255, blank=True)
-    return_location = models.CharField(max_length=255, blank=True)
+    pickup_location = models.CharField(max_length=255, blank=True)  # Локація, де забирають автомобіль
+    return_location = models.CharField(max_length=255, blank=True)  # Локація, де повертають автомобіль
     
     # Статус та інформація
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
-    total_price = models.DecimalField(max_digits=10, decimal_places=2)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')  # Статус бронювання
+    total_price = models.DecimalField(max_digits=10, decimal_places=2)  # Загальна вартість бронювання
     
     # Системна інформація
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)  # Дата створення бронювання
+    updated_at = models.DateTimeField(auto_now=True)  # Дата останнього оновлення бронювання
     
     # Інформація про оплату
-    last_billing_time = models.DateTimeField(null=True, blank=True)
-    minutes_billed = models.PositiveIntegerField(default=0)
+    last_billing_time = models.DateTimeField(null=True, blank=True)  # Час останнього виставлення рахунку
+    minutes_billed = models.PositiveIntegerField(default=0)  # Кількість хвилин, за які виставлено рахунок
+
     def __str__(self):
         return f"Booking {self.id} - {self.car} ({self.status})"
     
@@ -80,10 +80,10 @@ class Booking(models.Model):
 class BookingHistory(models.Model):
     """Модель для історії бронювань (для відстеження змін)"""
     
-    booking = models.ForeignKey(Booking, on_delete=models.CASCADE, related_name='history')
-    status = models.CharField(max_length=20, choices=Booking.STATUS_CHOICES)
-    timestamp = models.DateTimeField(auto_now_add=True)
-    notes = models.TextField(blank=True)
+    booking = models.ForeignKey(Booking, on_delete=models.CASCADE, related_name='history')  # Бронювання, до якого належить запис історії
+    status = models.CharField(max_length=20, choices=Booking.STATUS_CHOICES)  # Статус бронювання на момент запису
+    timestamp = models.DateTimeField(auto_now_add=True)  # Час створення запису історії
+    notes = models.TextField(blank=True)  # Додаткові примітки до запису історії
     
     def __str__(self):
         return f"History {self.booking.id} - {self.status} ({self.timestamp})"

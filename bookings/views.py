@@ -143,10 +143,13 @@ def end_rental(request, pk):
     })
 
 class ActiveBookingsView(LoginRequiredMixin, ListView):
+    """Представлення для відображення списку активних бронювань користувача"""
     model = Booking
     template_name = 'active_bookings.html'
     context_object_name = 'bookings'
+
     def get_queryset(self):
+        """Отримати активні бронювання користувача, які зараз тривають"""
         now = timezone.now()
         return Booking.objects.filter(
             user=self.request.user,
@@ -156,17 +159,22 @@ class ActiveBookingsView(LoginRequiredMixin, ListView):
         ).order_by('end_time')
 
 class CompletedBookingsView(LoginRequiredMixin, ListView):
+    """Представлення для відображення списку завершених бронювань користувача"""
     model = Booking
     template_name = 'completed_bookings.html'
     context_object_name = 'bookings'
+
     def get_queryset(self):
+        """Отримати завершені бронювання користувача"""
         return Booking.objects.filter(
             user=self.request.user,
             status='completed'
         ).order_by('-end_time')
 
 class BookingDetailView(LoginRequiredMixin, View):
+    """Представлення для відображення деталей конкретного бронювання"""
     def get(self, request, pk):
+        """Отримати деталі бронювання та історію змін"""
         booking = get_object_or_404(Booking, pk=pk)
         if not request.user.is_staff and booking.user != request.user:
             return HttpResponseForbidden("У вас немає доступу до цього бронювання.")

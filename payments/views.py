@@ -23,7 +23,7 @@ from .models import Payment, LiqPayPayment, PaymentTransaction
 from .forms import CreatePaymentForm, PaymentFilterForm, TransactionFilterForm
 
 class PaymentListView(LoginRequiredMixin, ListView):
-    """Відображення списку платежів користувача"""
+    """Представлення списку платежів користувача"""
     
     model = Payment
     template_name = 'payment_list.html'
@@ -98,7 +98,7 @@ class PaymentListView(LoginRequiredMixin, ListView):
         return context
 
 class PaymentDetailView(LoginRequiredMixin, DetailView):
-    """Відображення деталей платежу"""
+    """Представлення деталей платежу"""
 
     model = Payment
     template_name = 'payment_detail.html'
@@ -112,7 +112,7 @@ class PaymentDetailView(LoginRequiredMixin, DetailView):
         return Payment.objects.filter(user=user)
 
 class CreatePaymentView(LoginRequiredMixin, FormView):
-    """Відображення для створення нових платежів"""
+    """Представлення для створення нових платежів"""
 
     form_class = CreatePaymentForm
     template_name = 'create_payment.html'
@@ -189,7 +189,7 @@ class CreatePaymentView(LoginRequiredMixin, FormView):
             return redirect('payment-list')
 
 class ProcessPaymentView(LoginRequiredMixin, View):
-    """Відображення для обробки платежу через LiqPay"""
+    """Представлення для обробки платежу через LiqPay"""
     
     def get(self, request):
         """Показати форму платежу LiqPay"""
@@ -222,7 +222,7 @@ class PaymentSuccessView(LoginRequiredMixin, View):
     """Обробка успішних платежів"""
     
     def get(self, request):
-        # Це відображення показується після того, як клієнт перенаправлений із платіжної системи
+        # Це повідомлення показується після того, як клієнт перенаправлений із платіжної системи
         messages.success(request, "Платіж обробляється. Якщо платіж був успішним, ваш баланс буде оновлено найближчим часом.")
         return redirect('payment-list')
 
@@ -304,7 +304,7 @@ class LiqPayCallbackView(View):
         )
 
 class TransactionListView(LoginRequiredMixin, ListView):
-    """Відображення списку транзакцій"""
+    """Представлення списку транзакцій"""
     
     model = PaymentTransaction
     template_name = 'transaction_list.html'

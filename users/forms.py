@@ -4,7 +4,7 @@ from django.core.exceptions import ValidationError
 from .models import User, DriverLicenseVerification
 
 class UserRegistrationForm(UserCreationForm):
-    """Form for user registration"""
+    """Форма для реєстрації користувача"""
     email = forms.EmailField(required=True)
     phone_number = forms.CharField(required=False, max_length=17)
     date_of_birth = forms.DateField(
@@ -20,11 +20,11 @@ class UserRegistrationForm(UserCreationForm):
     def clean_email(self):
         email = self.cleaned_data.get('email')
         if User.objects.filter(email=email).exists():
-            raise ValidationError("Email already in use")
+            raise ValidationError("Цей email вже використовується")
         return email
 
 class UserProfileUpdateForm(forms.ModelForm):
-    """Form for updating user profile"""
+    """Форма для оновлення профілю користувача"""
     date_of_birth = forms.DateField(
         required=False, 
         widget=forms.DateInput(attrs={'type': 'date'})
@@ -38,7 +38,7 @@ class UserProfileUpdateForm(forms.ModelForm):
         }
 
 class CustomPasswordChangeForm(PasswordChangeForm):
-    """Form for changing user password"""
+    """Форма для зміни пароля користувача"""
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -47,7 +47,7 @@ class CustomPasswordChangeForm(PasswordChangeForm):
         self.fields['new_password2'].widget.attrs.update({'class': 'form-control'})
 
 class DriverLicenseVerificationForm(forms.ModelForm):
-    """Form for driver license verification"""
+    """Форма для верифікації водійського посвідчення"""
     
     class Meta:
         model = DriverLicenseVerification
@@ -59,7 +59,7 @@ class DriverLicenseVerificationForm(forms.ModelForm):
         }
 
 class AdminVerificationForm(forms.ModelForm):
-    """Form for admins to approve/reject license verification"""
+    """Форма для адміністраторів для затвердження/відхилення верифікації посвідчення"""
     
     class Meta:
         model = DriverLicenseVerification
@@ -70,7 +70,7 @@ class AdminVerificationForm(forms.ModelForm):
         }
 
 class BalanceAddForm(forms.Form):
-    """Form for adding funds to user balance"""
+    """Форма для додавання коштів на баланс користувача"""
     amount = forms.DecimalField(
         max_digits=10, 
         decimal_places=2, 
