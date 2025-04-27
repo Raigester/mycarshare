@@ -142,9 +142,6 @@ LOGIN_REDIRECT_URL = "/accounts/profile/"
 # URL для виходу
 LOGOUT_REDIRECT_URL = "/accounts/login/"
 
-# Налаштування CORS
-CORS_ALLOW_ALL_ORIGINS = True  # Дозволити всі джерела (тільки для розробки!)
-
 # Налаштування Celery
 CELERY_BROKER_URL = f"redis://{config('REDIS_HOST')}:{config('REDIS_PORT')}/{config('REDIS_DB')}"  # URL брокера завдань
 CELERY_RESULT_BACKEND = CELERY_BROKER_URL  # Бекенд для збереження результатів завдань
