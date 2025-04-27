@@ -20,7 +20,7 @@ class CarReviewInline(admin.TabularInline):
     can_delete = False
 
 class CarAdmin(admin.ModelAdmin):
-    list_display = ('license_plate', 'get_brand', 'get_model', 'year', 'status', 'price_per_hour', 'rating')
+    list_display = ('license_plate', 'get_brand', 'get_model', 'year', 'status', 'rating')
     list_filter = ('status', 'fuel_type', 'transmission', 'year')
     search_fields = ('license_plate', 'model__name', 'model__brand__name')
     inlines = [CarPhotoInline, CarReviewInline]

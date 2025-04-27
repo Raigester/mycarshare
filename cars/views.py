@@ -79,14 +79,12 @@ class CarViewSet(viewsets.ModelViewSet):
         'transmission': ['exact'],
         'seats': ['exact', 'gte', 'lte'],
         'year': ['exact', 'gte', 'lte'],
-        'price_per_hour': ['gte', 'lte'],
-        'price_per_day': ['gte', 'lte'],
         'status': ['exact'],
         'has_air_conditioning': ['exact'],
         'has_gps': ['exact'],
         'has_child_seat': ['exact'],
     }
-    ordering_fields = ['price_per_hour', 'price_per_day', 'rating', 'year', 'mileage']
+    ordering_fields = ['rating', 'year', 'mileage']
     
     def get_serializer_class(self):
         if self.action == 'retrieve':
