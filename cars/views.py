@@ -21,14 +21,14 @@ def is_staff(user):
 class CarBrandListView(ListView):
     """Представлення для списку брендів автомобілів"""
     model = CarBrand
-    template_name = 'cars/brand_list.html'
+    template_name = 'brand_list.html'
     context_object_name = 'brands'
     paginate_by = 10
 
 class CarBrandDetailView(DetailView):
     """Представлення для деталей бренду автомобіля"""
     model = CarBrand
-    template_name = 'cars/brand_detail.html'
+    template_name = 'brand_detail.html'
     context_object_name = 'brand'
     
     def get_context_data(self, **kwargs):
@@ -40,7 +40,7 @@ class CarBrandCreateView(UserPassesTestMixin, CreateView):
     """Представлення для створення бренду автомобіля"""
     model = CarBrand
     form_class = CarBrandForm
-    template_name = 'cars/brand_form.html'
+    template_name = 'brand_form.html'
     success_url = reverse_lazy('car-brand-list')
     
     def test_func(self):
@@ -54,7 +54,7 @@ class CarBrandUpdateView(UserPassesTestMixin, UpdateView):
     """Представлення для оновлення бренду автомобіля"""
     model = CarBrand
     form_class = CarBrandForm
-    template_name = 'cars/brand_form.html'
+    template_name = 'brand_form.html'
     
     def test_func(self):
         return self.request.user.is_staff
@@ -69,7 +69,7 @@ class CarBrandUpdateView(UserPassesTestMixin, UpdateView):
 class CarBrandDeleteView(UserPassesTestMixin, DeleteView):
     """Представлення для видалення бренду автомобіля"""
     model = CarBrand
-    template_name = 'cars/brand_confirm_delete.html'
+    template_name = 'brand_confirm_delete.html'
     success_url = reverse_lazy('car-brand-list')
     
     def test_func(self):
@@ -84,7 +84,7 @@ class CarBrandDeleteView(UserPassesTestMixin, DeleteView):
 class CarModelListView(ListView):
     """Представлення для списку моделей автомобілів"""
     model = CarModel
-    template_name = 'cars/model_list.html'
+    template_name = 'model_list.html'
     context_object_name = 'models'
     paginate_by = 10
     
@@ -107,7 +107,7 @@ class CarModelListView(ListView):
 class CarModelDetailView(DetailView):
     """View for car model details"""
     model = CarModel
-    template_name = 'cars/model_detail.html'
+    template_name = 'model_detail.html'
     context_object_name = 'model'
     
     def get_context_data(self, **kwargs):
@@ -119,7 +119,7 @@ class CarModelCreateView(UserPassesTestMixin, CreateView):
     """View for creating a car model"""
     model = CarModel
     form_class = CarModelForm
-    template_name = 'cars/model_form.html'
+    template_name = 'model_form.html'
     success_url = reverse_lazy('car-model-list')
     
     def test_func(self):
@@ -133,7 +133,7 @@ class CarModelUpdateView(UserPassesTestMixin, UpdateView):
     """View for updating a car model"""
     model = CarModel
     form_class = CarModelForm
-    template_name = 'cars/model_form.html'
+    template_name = 'model_form.html'
     
     def test_func(self):
         return self.request.user.is_staff
@@ -148,7 +148,7 @@ class CarModelUpdateView(UserPassesTestMixin, UpdateView):
 class CarModelDeleteView(UserPassesTestMixin, DeleteView):
     """Представлення для видалення моделі автомобіля"""
     model = CarModel
-    template_name = 'cars/model_confirm_delete.html'
+    template_name = 'model_confirm_delete.html'
     success_url = reverse_lazy('car-model-list')
     
     def test_func(self):
@@ -163,7 +163,7 @@ class CarModelDeleteView(UserPassesTestMixin, DeleteView):
 class CarListView(ListView):
     """Представлення для списку автомобілів"""
     model = Car
-    template_name = 'cars/car_list.html'
+    template_name = 'car_list.html'
     context_object_name = 'cars'
     paginate_by = 10
     
@@ -231,7 +231,7 @@ class CarListView(ListView):
 class CarDetailView(DetailView):
     """Представлення для деталей автомобіля"""
     model = Car
-    template_name = 'cars/car_detail.html'
+    template_name = 'car_detail.html'
     context_object_name = 'car'
     
     def get_context_data(self, **kwargs):
@@ -260,7 +260,7 @@ class CarCreateView(UserPassesTestMixin, CreateView):
     """Представлення для створення автомобіля"""
     model = Car
     form_class = CarForm
-    template_name = 'cars/car_form.html'
+    template_name = 'car_form.html'
     success_url = reverse_lazy('car-list')
     
     def test_func(self):
@@ -274,7 +274,7 @@ class CarUpdateView(UserPassesTestMixin, UpdateView):
     """Представлення для оновлення автомобіля"""
     model = Car
     form_class = CarForm
-    template_name = 'cars/car_form.html'
+    template_name = 'car_form.html'
     
     def test_func(self):
         return self.request.user.is_staff
@@ -289,7 +289,7 @@ class CarUpdateView(UserPassesTestMixin, UpdateView):
 class CarDeleteView(UserPassesTestMixin, DeleteView):
     """Представлення для видалення автомобіля"""
     model = Car
-    template_name = 'cars/car_confirm_delete.html'
+    template_name = 'car_confirm_delete.html'
     success_url = reverse_lazy('car-list')
     
     def test_func(self):
@@ -321,7 +321,7 @@ def update_car_location(request, pk):
             'longitude': car.current_longitude
         })
     
-    return render(request, 'cars/car_location_form.html', {
+    return render(request, 'car_location_form.html', {
         'form': form,
         'car': car
     })
@@ -343,7 +343,7 @@ def change_car_status(request, pk):
     else:
         form = CarStatusForm(initial={'status': car.status})
     
-    return render(request, 'cars/car_status_form.html', {
+    return render(request, 'car_status_form.html', {
         'form': form,
         'car': car
     })
@@ -352,7 +352,7 @@ def change_car_status(request, pk):
 class CarPhotoListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
     """Представлення для списку фотографій автомобілів"""
     model = CarPhoto
-    template_name = 'cars/photo_list.html'
+    template_name = 'photo_list.html'
     context_object_name = 'photos'
     paginate_by = 20
     
@@ -379,7 +379,7 @@ class CarPhotoCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
     """Представлення для створення фотографії автомобіля"""
     model = CarPhoto
     form_class = CarPhotoForm
-    template_name = 'cars/photo_form.html'
+    template_name = 'photo_form.html'
     success_url = reverse_lazy('car-photo-list')
     
     def test_func(self):
@@ -392,7 +392,7 @@ class CarPhotoCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
 class CarPhotoDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
     """Представлення для видалення фотографії автомобіля"""
     model = CarPhoto
-    template_name = 'cars/photo_confirm_delete.html'
+    template_name = 'photo_confirm_delete.html'
     
     def test_func(self):
         return self.request.user.is_staff
@@ -433,7 +433,7 @@ def add_car_review(request, pk):
     else:
         form = CarReviewForm(initial={'car': car}, user=request.user)
     
-    return render(request, 'cars/review_form.html', {
+    return render(request, 'review_form.html', {
         'form': form,
         'car': car
     })
@@ -463,7 +463,7 @@ def edit_car_review(request, pk):
     else:
         form = CarReviewForm(instance=review, user=request.user)
     
-    return render(request, 'cars/review_form.html', {
+    return render(request, 'review_form.html', {
         'form': form,
         'car': review.car,
         'review': review
@@ -491,7 +491,7 @@ def delete_car_review(request, pk):
         messages.success(request, "Відгук успішно видалено.")
         return redirect('car-detail', pk=car.pk)
     
-    return render(request, 'cars/review_confirm_delete.html', {
+    return render(request, 'review_confirm_delete.html', {
         'review': review,
         'car': car
     })
@@ -536,7 +536,7 @@ def get_car_api(request, pk):
 class AvailableCarsView(ListView):
     """Представлення для списку доступних автомобілів"""
     model = Car
-    template_name = 'cars/available_cars.html'
+    template_name = 'available_cars.html'
     context_object_name = 'cars'
     paginate_by = 12
     
@@ -564,7 +564,7 @@ def cars_map_view(request):
     if brand_id:
         cars = cars.filter(model__brand_id=brand_id)
     
-    return render(request, 'cars/cars_map.html', {
+    return render(request, 'cars_map.html', {
         'cars': cars,
         'brands': CarBrand.objects.all(),
         'selected_status': status,
