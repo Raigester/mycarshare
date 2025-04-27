@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+
+{% block title %}Головна - MyCarShare{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <div class="text-center mb-5">
+        <h1 class="mb-3">Ласкаво просимо до <span class="text-primary">MyCarShare</span>!</h1>
+        <p class="lead">Зручна платформа для оренди автомобілів у будь-який час.</p>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 car-card text-center">
+                <div class="card-body">
+                    <i class="bi bi-car-front-fill" style="font-size: 48px; color: #4a89dc;"></i>
+                    <h5 class="card-title mt-3">Великий вибір авто</h5>
+                    <p class="card-text">Обирайте серед різних моделей для будь-яких потреб і бюджету.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 car-card text-center">
+                <div class="card-body">
+                    <i class="bi bi-clock-history" style="font-size: 48px; color: #4a89dc;"></i>
+                    <h5 class="card-title mt-3">Швидке бронювання</h5>
+                    <p class="card-text">Бронюйте автомобіль за кілька кліків без зайвої бюрократії.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 car-card text-center">
+                <div class="card-body">
+                    <i class="bi bi-shield-check" style="font-size: 48px; color: #4a89dc;"></i>
+                    <h5 class="card-title mt-3">Безпека та страховка</h5>
+                    <p class="card-text">Усі автомобілі проходять регулярну перевірку і мають страхування.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-5 text-center">
+        <h2 class="mb-3">Готові вирушити в дорогу?</h2>
+        <a href="{% url 'available-cars' %}" class="btn btn-success btn-lg">Переглянути доступні авто </a>
+    </div>
+</div>
+{% endblock %}
