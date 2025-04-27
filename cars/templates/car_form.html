@@ -2,6 +2,17 @@
 
 {% block title %}{% if form.instance.pk %}Зміна автомобіля{% else %}Додавання автомобіля{% endif %} - MyCarShare{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<style>
+    #map {
+        height: 400px;
+        width: 100%;
+        border-radius: 0.25rem;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="form-container">
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -290,7 +301,17 @@
                                 </div>
                             {% endif %}
                         </div>
-                    </div>
+                    
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5 class="mb-0">Вибір місця на карті</h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="map" style="height: 400px; width: 100%; border-radius: 0.25rem;"></div>
+                                <p class="mt-2 text-muted">Клацніть на карті, щоб обрати місце розташування автомобіля або перемістіть маркер. Координати автоматично заповняться у відповідні поля.</p>
+                            </div>
+                        </div>                        
+                    
                 </div>
                 
                 <hr>
@@ -334,4 +355,81 @@
         </div>
     </div>
 </div>
+{% endblock %}
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const defaultPosition = [50.4501, 30.5234];
+        const map = L.map('map').setView(defaultPosition, 12);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        const latitudeInput = document.getElementById('{{ form.current_latitude.id_for_label }}');
+        const longitudeInput = document.getElementById('{{ form.current_longitude.id_for_label }}');
+
+        let marker;
+
+        const carLatitude = "{{ form.instance.current_latitude }}";
+        const carLongitude = "{{ form.instance.current_longitude }}";
+
+        if (carLatitude && carLongitude && carLatitude !== "None" && carLongitude !== "None") {
+            const lat = parseFloat(carLatitude);
+            const lng = parseFloat(carLongitude);
+            if (!isNaN(lat) && !isNaN(lng)) {
+                map.setView([lat, lng], 15);
+                marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+                marker.on('dragend', function(e) {
+                    const pos = marker.getLatLng();
+                    latitudeInput.value = pos.lat.toFixed(6);
+                    longitudeInput.value = pos.lng.toFixed(6);
+                });
+            }
+        }
+
+        map.on('click', function(e) {
+            const clickedLat = e.latlng.lat.toFixed(6);
+            const clickedLng = e.latlng.lng.toFixed(6);
+
+            latitudeInput.value = clickedLat;
+            longitudeInput.value = clickedLng;
+
+            if (marker) {
+                marker.setLatLng(e.latlng);
+            } else {
+                marker = L.marker(e.latlng, { draggable: true }).addTo(map);
+                marker.on('dragend', function(e) {
+                    const pos = marker.getLatLng();
+                    latitudeInput.value = pos.lat.toFixed(6);
+                    longitudeInput.value = pos.lng.toFixed(6);
+                });
+            }
+        });
+
+        latitudeInput.addEventListener('change', updateMarkerFromInputs);
+        longitudeInput.addEventListener('change', updateMarkerFromInputs);
+
+        function updateMarkerFromInputs() {
+            const lat = parseFloat(latitudeInput.value);
+            const lng = parseFloat(longitudeInput.value);
+
+            if (!isNaN(lat) && !isNaN(lng)) {
+                const newLatLng = L.latLng(lat, lng);
+                if (marker) {
+                    marker.setLatLng(newLatLng);
+                } else {
+                    marker = L.marker(newLatLng, { draggable: true }).addTo(map);
+                    marker.on('dragend', function(e) {
+                        const pos = marker.getLatLng();
+                        latitudeInput.value = pos.lat.toFixed(6);
+                        longitudeInput.value = pos.lng.toFixed(6);
+                    });
+                }
+                map.setView(newLatLng, 15);
+            }
+        }
+    });
+</script>
 {% endblock %}
