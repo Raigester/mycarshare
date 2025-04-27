@@ -1,144 +1,155 @@
-from decimal import Decimal
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth import login, update_session_auth_hash
+
+from django.contrib import messages
+from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.views import LoginView
-from django.contrib import messages
-from django.views.generic import CreateView, UpdateView, ListView, DetailView, FormView
-from django.urls import reverse_lazy, reverse
-from django.http import HttpResponseRedirect
+from django.shortcuts import redirect, render
+from django.urls import reverse_lazy
+from django.views.generic import CreateView, ListView, UpdateView
 
-from .models import User, DriverLicenseVerification, UserBalance
 from .forms import (
-    UserRegistrationForm, UserProfileUpdateForm, CustomPasswordChangeForm,
-    DriverLicenseVerificationForm, AdminVerificationForm, BalanceAddForm
+    AdminVerificationForm,
+    BalanceAddForm,
+    CustomPasswordChangeForm,
+    DriverLicenseVerificationForm,
+    UserProfileUpdateForm,
+    UserRegistrationForm,
 )
-
+from .models import DriverLicenseVerification, User, UserBalance
 
 
 class UserRegistrationView(CreateView):
     """Представлення для реєстрації користувача"""
     form_class = UserRegistrationForm
-    template_name = 'register.html'
-    success_url = reverse_lazy('login')
-    
+    template_name = "register.html"
+    success_url = reverse_lazy("login")
+
     def form_valid(self, form):
-        user = form.save()
-        messages.success(self.request, 'Акаунт успішно створено! Тепер ви можете увійти.')
+        form.save()
+        messages.success(self.request, "Акаунт успішно створено! Тепер ви можете увійти.")
         return super().form_valid(form)
 
 class CustomLoginView(LoginView):
     """Представлення для входу користувача"""
-    template_name = 'login.html'
+    template_name = "login.html"
 
     def dispatch(self, request, *args, **kwargs):
         if request.user.is_authenticated:
-            return redirect('profile')
+            return redirect("profile")
         return super().dispatch(request, *args, **kwargs)
 
 class UserProfileView(LoginRequiredMixin, UpdateView):
     """Представлення для профілю користувача"""
     model = User
     form_class = UserProfileUpdateForm
-    template_name = 'profile.html'
-    success_url = reverse_lazy('profile')
-    
+    template_name = "profile.html"
+    success_url = reverse_lazy("profile")
+
     def get_object(self):
         return self.request.user
-    
+
     def form_valid(self, form):
-        messages.success(self.request, 'Ваш профіль успішно оновлено!')
+        messages.success(self.request, "Ваш профіль успішно оновлено!")
         return super().form_valid(form)
 
 @login_required
 def change_password_view(request):
     """Представлення для зміни пароля користувача"""
-    if request.method == 'POST':
+    if request.method == "POST":
         form = CustomPasswordChangeForm(request.user, request.POST)
         if form.is_valid():
             user = form.save()
             update_session_auth_hash(request, user)  # Залишити користувача в системі
-            messages.success(request, 'Ваш пароль успішно змінено!')
-            return redirect('profile')
+            messages.success(request, "Ваш пароль успішно змінено!")
+            return redirect("profile")
         else:
-            messages.error(request, 'Будь ласка, виправте помилки нижче.')
+            messages.error(request, "Будь ласка, виправте помилки нижче.")
     else:
         form = CustomPasswordChangeForm(request.user)
-    
-    return render(request, 'change_password.html', {'form': form})
+
+    return render(request, "change_password.html", {"form": form})
 
 class DriverLicenseVerificationCreateView(LoginRequiredMixin, CreateView):
     """Представлення для створення запиту на верифікацію водійських прав"""
     model = DriverLicenseVerification
     form_class = DriverLicenseVerificationForm
-    template_name = 'driver_verification_form.html'
-    success_url = reverse_lazy('verification-list')
-    
+    template_name = "driver_verification_form.html"
+    success_url = reverse_lazy("verification-list")
+
     def dispatch(self, request, *args, **kwargs):
         active_verification = DriverLicenseVerification.objects.filter(
             user=request.user,
-        ).exclude(status='rejected').order_by('-created_at').first()
+        ).exclude(status="rejected").order_by("-created_at").first()
 
         if active_verification:
-            messages.error(request, 'Ви вже маєте схвалену заявку на верифікацію або ваша заявка в очікуванні розгляду.')
-            return redirect('verification-list')
+            messages.error(
+                request,
+                "Ви вже маєте схвалену заявку на верифікацію або ваша заявка в очікуванні розгляду."
+            )
+            return redirect("verification-list")
 
         return super().dispatch(request, *args, **kwargs)
-    
+
     def form_valid(self, form):
         form.instance.user = self.request.user
-        messages.success(self.request, 'Ваш запит на верифікацію водійських прав надіслано!')
+        messages.success(self.request, "Ваш запит на верифікацію водійських прав надіслано!")
         return super().form_valid(form)
 
 
 class DriverLicenseVerificationListView(LoginRequiredMixin, ListView):
     """Представлення для відображення списку запитів на верифікацію водійських прав користувача"""
     model = DriverLicenseVerification
-    template_name = 'driver_verification_list.html'
-    context_object_name = 'verifications'
-    
+    template_name = "driver_verification_list.html"
+    context_object_name = "verifications"
+
     def get_queryset(self):
         return DriverLicenseVerification.objects.filter(user=self.request.user)
 
 class AdminVerificationListView(UserPassesTestMixin, ListView):
     """Представлення для адміністратора для перегляду запитів на верифікацію"""
     model = DriverLicenseVerification
-    template_name = 'admin_verification_list.html'
-    context_object_name = 'verifications'
+    template_name = "admin_verification_list.html"
+    context_object_name = "verifications"
 
     def test_func(self):
         return self.request.user.is_staff
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['pending_verifications'] = DriverLicenseVerification.objects.filter(status='pending').order_by('-created_at')
-        context['approved_verifications'] = DriverLicenseVerification.objects.filter(status='approved').order_by('-created_at')
-        context['rejected_verifications'] = DriverLicenseVerification.objects.filter(status='rejected').order_by('-created_at')
+        context["pending_verifications"] = DriverLicenseVerification.objects.filter(
+            status="pending"
+        ).order_by("-created_at")
+        context["approved_verifications"] = DriverLicenseVerification.objects.filter(
+            status="approved"
+        ).order_by("-created_at")
+        context["rejected_verifications"] = DriverLicenseVerification.objects.filter(
+            status="rejected"
+        ).order_by("-created_at")
         return context
 
 class AdminVerificationUpdateView(UserPassesTestMixin, UpdateView):
     """Представлення адміністратора для оновлення запиту на верифікацію"""
     model = DriverLicenseVerification
     form_class = AdminVerificationForm
-    template_name = 'admin_verification_detail.html'
-    success_url = reverse_lazy('admin-verification-list')
-    
+    template_name = "admin_verification_detail.html"
+    success_url = reverse_lazy("admin-verification-list")
+
     def test_func(self):
         return self.request.user.is_staff
-    
+
     def form_valid(self, form):
         verification = form.save()
-        
+
         # Якщо верифікація схвалена, оновити статус користувача
-        if verification.status == 'approved':
+        if verification.status == "approved":
             user = verification.user
             user.is_verified_driver = True
             user.save()
-            messages.success(self.request, f'Верифікація водія для {user.username} схвалена!')
-        elif verification.status == 'rejected':
-            messages.info(self.request, f'Верифікація водія для {verification.user.username} відхилена.')
-            
+            messages.success(self.request, f"Верифікація водія для {user.username} схвалена!")
+        elif verification.status == "rejected":
+            messages.info(self.request, f"Верифікація водія для {verification.user.username} відхилена.")
+
         return super().form_valid(form)
 
 @login_required
@@ -146,19 +157,19 @@ def user_balance_view(request):
     """Представлення для відображення та поповнення балансу користувача"""
     # Отримати або створити баланс користувача
     balance, created = UserBalance.objects.get_or_create(user=request.user)
-    
-    if request.method == 'POST':
+
+    if request.method == "POST":
         form = BalanceAddForm(request.POST)
         if form.is_valid():
-            amount = form.cleaned_data['amount']
+            amount = form.cleaned_data["amount"]
             balance.amount += amount
             balance.save()
-            messages.success(request, f'Успішно додано {amount} до вашого балансу!')
-            return redirect('balance')
+            messages.success(request, f"Успішно додано {amount} до вашого балансу!")
+            return redirect("balance")
     else:
         form = BalanceAddForm()
-    
-    return render(request, 'balance.html', {
-        'balance': balance,
-        'form': form
+
+    return render(request, "balance.html", {
+        "balance": balance,
+        "form": form
     })
