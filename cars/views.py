@@ -22,6 +22,15 @@ from .models import Car, CarBrand, CarModel, CarPhoto, CarReview
 
 # Функція перевірки адміністратора
 def is_staff(user):
+    """
+    Перевіряє, чи є користувач адміністратором.
+
+    Args:
+        user: Об'єкт користувача, для якого виконується перевірка.
+
+    Returns:
+        bool: True, якщо користувач є адміністратором, False - в іншому випадку.
+    """
     return user.is_staff
 
 # Представлення для брендів автомобілів
@@ -39,6 +48,15 @@ class CarBrandDetailView(DetailView):
     context_object_name = "brand"
 
     def get_context_data(self, **kwargs):
+        """
+        Додає моделі автомобілів бренду до контексту.
+
+        Args:
+            **kwargs: Додаткові іменовані аргументи.
+
+        Returns:
+            dict: Контекст з доданими моделями автомобілів.
+        """
         context = super().get_context_data(**kwargs)
         context["models"] = self.object.models.all()
         return context
@@ -51,9 +69,28 @@ class CarBrandCreateView(UserPassesTestMixin, CreateView):
     success_url = reverse_lazy("car-brand-list")
 
     def test_func(self):
+        """
+        Перевіряє, чи має користувач право на створення бренду.
+
+        Args:
+            self: Екземпляр класу.
+
+        Returns:
+            bool: True, якщо користувач є адміністратором, False - в іншому випадку.
+        """
         return self.request.user.is_staff
 
     def form_valid(self, form):
+        """
+        Обробляє валідну форму при створенні бренду.
+
+        Args:
+            self: Екземпляр класу.
+            form: Валідована форма для створення бренду.
+
+        Returns:
+            HttpResponse: Відповідь після успішного створення бренду.
+        """
         messages.success(self.request, f"Бренд автомобіля '{form.instance.name}' успішно створено.")
         return super().form_valid(form)
 
@@ -64,12 +101,40 @@ class CarBrandUpdateView(UserPassesTestMixin, UpdateView):
     template_name = "brand_form.html"
 
     def test_func(self):
+        """
+        Перевіряє, чи має користувач право на оновлення бренду.
+
+        Args:
+            self: Екземпляр класу.
+
+        Returns:
+            bool: True, якщо користувач є адміністратором, False - в іншому випадку.
+        """
         return self.request.user.is_staff
 
     def get_success_url(self):
+        """
+        Визначає URL-адресу перенаправлення після успішного оновлення бренду.
+
+        Args:
+            self: Екземпляр класу.
+
+        Returns:
+            str: URL-адреса для перенаправлення.
+        """
         return reverse("car-brand-detail", kwargs={"pk": self.object.pk})
 
     def form_valid(self, form):
+        """
+        Обробляє валідну форму при оновленні бренду.
+
+        Args:
+            self: Екземпляр класу.
+            form: Валідована форма для оновлення бренду.
+
+        Returns:
+            HttpResponse: Відповідь після успішного оновлення бренду.
+        """
         messages.success(self.request, f"Бренд автомобіля '{form.instance.name}' успішно оновлено.")
         return super().form_valid(form)
 
@@ -80,9 +145,30 @@ class CarBrandDeleteView(UserPassesTestMixin, DeleteView):
     success_url = reverse_lazy("car-brand-list")
 
     def test_func(self):
+        """
+        Перевіряє, чи має користувач право на видалення бренду.
+
+        Args:
+            self: Екземпляр класу.
+
+        Returns:
+            bool: True, якщо користувач є адміністратором, False - в іншому випадку.
+        """
         return self.request.user.is_staff
 
     def delete(self, request, *args, **kwargs):
+        """
+        Обробляє видалення бренду автомобіля.
+
+        Args:
+            self: Екземпляр класу.
+            request: Об'єкт запиту.
+            *args: Додаткові позиційні аргументи.
+            **kwargs: Додаткові іменовані аргументи.
+
+        Returns:
+            HttpResponse: Відповідь після успішного видалення бренду.
+        """
         brand = self.get_object()
         messages.success(request, f"Бренд автомобіля '{brand.name}' успішно видалено.")
         return super().delete(request, *args, **kwargs)
@@ -96,6 +182,15 @@ class CarModelListView(ListView):
     paginate_by = 10
 
     def get_queryset(self):
+        """
+        Отримує список моделей автомобілів з можливою фільтрацією за брендом.
+
+        Args:
+            self: Екземпляр класу.
+
+        Returns:
+            QuerySet: Відфільтрований QuerySet моделей автомобілів.
+        """
         queryset = super().get_queryset()
 
         # Фільтрація по бренду, якщо вказано
@@ -106,6 +201,16 @@ class CarModelListView(ListView):
         return queryset
 
     def get_context_data(self, **kwargs):
+        """
+        Додає до контексту список всіх брендів та обраний бренд для фільтрації.
+
+        Args:
+            self: Екземпляр класу.
+            **kwargs: Додаткові іменовані аргументи.
+
+        Returns:
+            dict: Контекст з доданими брендами та обраним брендом.
+        """
         context = super().get_context_data(**kwargs)
         context["brands"] = CarBrand.objects.all()
         context["selected_brand"] = self.request.GET.get("brand")
@@ -118,6 +223,16 @@ class CarModelDetailView(DetailView):
     context_object_name = "model"
 
     def get_context_data(self, **kwargs):
+        """
+        Додає до контексту список автомобілів для обраної моделі.
+
+        Args:
+            self: Екземпляр класу.
+            **kwargs: Додаткові іменовані аргументи.
+
+        Returns:
+            dict: Контекст з доданим списком автомобілів.
+        """
         context = super().get_context_data(**kwargs)
         context["cars"] = self.object.cars.all()
         return context
@@ -130,9 +245,28 @@ class CarModelCreateView(UserPassesTestMixin, CreateView):
     success_url = reverse_lazy("car-model-list")
 
     def test_func(self):
+        """
+        Перевіряє, чи має користувач право на створення моделі автомобіля.
+
+        Args:
+            self: Екземпляр класу.
+
+        Returns:
+            bool: True, якщо користувач є адміністратором, False - в іншому випадку.
+        """
         return self.request.user.is_staff
 
     def form_valid(self, form):
+        """
+        Обробляє валідну форму при створенні моделі автомобіля.
+
+        Args:
+            self: Екземпляр класу.
+            form: Валідована форма для створення моделі.
+
+        Returns:
+            HttpResponse: Відповідь після успішного створення моделі.
+        """
         messages.success(self.request, f"Модель автомобіля '{form.instance.name}' успішно створена.")
         return super().form_valid(form)
 
@@ -143,12 +277,40 @@ class CarModelUpdateView(UserPassesTestMixin, UpdateView):
     template_name = "model_form.html"
 
     def test_func(self):
+        """
+        Перевіряє, чи має користувач право на оновлення моделі автомобіля.
+
+        Args:
+            self: Екземпляр класу.
+
+        Returns:
+            bool: True, якщо користувач є адміністратором, False - в іншому випадку.
+        """
         return self.request.user.is_staff
 
     def get_success_url(self):
+        """
+        Визначає URL-адресу перенаправлення після успішного оновлення моделі.
+
+        Args:
+            self: Екземпляр класу.
+
+        Returns:
+            str: URL-адреса для перенаправлення.
+        """
         return reverse("car-model-detail", kwargs={"pk": self.object.pk})
 
     def form_valid(self, form):
+        """
+        Обробляє валідну форму при оновленні моделі автомобіля.
+
+        Args:
+            self: Екземпляр класу.
+            form: Валідована форма для оновлення моделі.
+
+        Returns:
+            HttpResponse: Відповідь після успішного оновлення моделі.
+        """
         messages.success(self.request, f"Модель автомобіля '{form.instance.name}' успішно оновлена.")
         return super().form_valid(form)
 
@@ -159,9 +321,30 @@ class CarModelDeleteView(UserPassesTestMixin, DeleteView):
     success_url = reverse_lazy("car-model-list")
 
     def test_func(self):
+        """
+        Перевіряє, чи має користувач право на видалення моделі автомобіля.
+
+        Args:
+            self: Екземпляр класу.
+
+        Returns:
+            bool: True, якщо користувач є адміністратором, False - в іншому випадку.
+        """
         return self.request.user.is_staff
 
     def delete(self, request, *args, **kwargs):
+        """
+        Обробляє видалення моделі автомобіля.
+
+        Args:
+            self: Екземпляр класу.
+            request: Об'єкт запиту.
+            *args: Додаткові позиційні аргументи.
+            **kwargs: Додаткові іменовані аргументи.
+
+        Returns:
+            HttpResponse: Відповідь після успішного видалення моделі.
+        """
         model = self.get_object()
         messages.success(request, f"Модель автомобіля '{model.name}' успішно видалена.")
         return super().delete(request, *args, **kwargs)
@@ -175,6 +358,15 @@ class CarListView(ListView):
     paginate_by = 10
 
     def get_queryset(self):
+        """
+        Отримує список автомобілів з можливими фільтрами.
+
+        Args:
+            self: Екземпляр класу.
+
+        Returns:
+            QuerySet: Відфільтрований QuerySet автомобілів.
+        """
         queryset = super().get_queryset()
 
         # Застосування фільтрів з форми
@@ -225,6 +417,16 @@ class CarListView(ListView):
         return queryset
 
     def get_context_data(self, **kwargs):
+        """
+        Додає до контексту форму фільтрації та статистику автомобілів.
+
+        Args:
+            self: Екземпляр класу.
+            **kwargs: Додаткові іменовані аргументи.
+
+        Returns:
+            dict: Контекст з доданою формою фільтрації та статистикою.
+        """
         context = super().get_context_data(**kwargs)
         context["filter_form"] = CarFilterForm(self.request.GET)
 
@@ -242,6 +444,16 @@ class CarDetailView(DetailView):
     context_object_name = "car"
 
     def get_context_data(self, **kwargs):
+        """
+        Додає до контексту фотографії, відгуки та форму для відгуку.
+
+        Args:
+            self: Екземпляр класу.
+            **kwargs: Додаткові іменовані аргументи.
+
+        Returns:
+            dict: Контекст з доданими фотографіями, відгуками та формою для відгуку.
+        """
         context = super().get_context_data(**kwargs)
 
         # Добавляем фотографії автомобіля
@@ -271,9 +483,28 @@ class CarCreateView(UserPassesTestMixin, CreateView):
     success_url = reverse_lazy("car-list")
 
     def test_func(self):
+        """
+        Перевіряє, чи має користувач право на створення автомобіля.
+
+        Args:
+            self: Екземпляр класу.
+
+        Returns:
+            bool: True, якщо користувач є адміністратором, False - в іншому випадку.
+        """
         return self.request.user.is_staff
 
     def form_valid(self, form):
+        """
+        Обробляє валідну форму при створенні автомобіля.
+
+        Args:
+            self: Екземпляр класу.
+            form: Валідована форма для створення автомобіля.
+
+        Returns:
+            HttpResponse: Відповідь після успішного створення автомобіля.
+        """
         messages.success(self.request, f"Автомобіль '{form.instance.model}' успішно додано.")
         return super().form_valid(form)
 
@@ -284,12 +515,40 @@ class CarUpdateView(UserPassesTestMixin, UpdateView):
     template_name = "car_form.html"
 
     def test_func(self):
+        """
+        Перевіряє, чи має користувач право на оновлення автомобіля.
+
+        Args:
+            self: Екземпляр класу.
+
+        Returns:
+            bool: True, якщо користувач є адміністратором, False - в іншому випадку.
+        """
         return self.request.user.is_staff
 
     def get_success_url(self):
+        """
+        Визначає URL-адресу перенаправлення після успішного оновлення автомобіля.
+
+        Args:
+            self: Екземпляр класу.
+
+        Returns:
+            str: URL-адреса для перенаправлення.
+        """
         return reverse("car-detail", kwargs={"pk": self.object.pk})
 
     def form_valid(self, form):
+        """
+        Обробляє валідну форму при оновленні автомобіля.
+
+        Args:
+            self: Екземпляр класу.
+            form: Валідована форма для оновлення автомобіля.
+
+        Returns:
+            HttpResponse: Відповідь після успішного оновлення автомобіля.
+        """
         messages.success(self.request, f"Автомобіль '{form.instance.model}' успішно оновлено.")
         return super().form_valid(form)
 
@@ -300,9 +559,30 @@ class CarDeleteView(UserPassesTestMixin, DeleteView):
     success_url = reverse_lazy("car-list")
 
     def test_func(self):
+        """
+        Перевіряє, чи має користувач право на видалення автомобіля.
+
+        Args:
+            self: Екземпляр класу.
+
+        Returns:
+            bool: True, якщо користувач є адміністратором, False - в іншому випадку.
+        """
         return self.request.user.is_staff
 
     def delete(self, request, *args, **kwargs):
+        """
+        Обробляє видалення автомобіля.
+
+        Args:
+            self: Екземпляр класу.
+            request: Об'єкт запиту.
+            *args: Додаткові позиційні аргументи.
+            **kwargs: Додаткові іменовані аргументи.
+
+        Returns:
+            HttpResponse: Відповідь після успішного видалення автомобіля.
+        """
         car = self.get_object()
         messages.success(request, f"Автомобіль '{car.model}' успішно видалено.")
         return super().delete(request, *args, **kwargs)
@@ -310,7 +590,16 @@ class CarDeleteView(UserPassesTestMixin, DeleteView):
 @login_required
 @user_passes_test(is_staff)
 def update_car_location(request, pk):
-    """Представлення для оновлення місцезнаходження автомобіля"""
+    """
+    Представлення для оновлення місцезнаходження автомобіля.
+
+    Args:
+        request: Об'єкт запиту Django.
+        pk: Первинний ключ автомобіля.
+
+    Returns:
+        HttpResponse: Відображення форми оновлення місцезнаходження або перенаправлення на сторінку деталей автомобіля.
+    """
     car = get_object_or_404(Car, pk=pk)
 
     if request.method == "POST":
@@ -336,7 +625,16 @@ def update_car_location(request, pk):
 @login_required
 @user_passes_test(is_staff)
 def change_car_status(request, pk):
-    """Представлення для зміни статусу автомобіля"""
+    """
+    Представлення для зміни статусу автомобіля.
+
+    Args:
+        request: Об'єкт запиту Django.
+        pk: Первинний ключ автомобіля.
+
+    Returns:
+        HttpResponse: Відображення форми зміни статусу або перенаправлення на сторінку деталей автомобіля.
+    """
     car = get_object_or_404(Car, pk=pk)
 
     if request.method == "POST":
@@ -364,9 +662,27 @@ class CarPhotoListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
     paginate_by = 20
 
     def test_func(self):
+        """
+        Перевіряє, чи має користувач право на перегляд списку фотографій.
+
+        Args:
+            self: Екземпляр класу.
+
+        Returns:
+            bool: True, якщо користувач є адміністратором, False - в іншому випадку.
+        """
         return self.request.user.is_staff
 
     def get_queryset(self):
+        """
+        Отримує список фотографій з можливою фільтрацією за автомобілем.
+
+        Args:
+            self: Екземпляр класу.
+
+        Returns:
+            QuerySet: Відфільтрований QuerySet фотографій автомобілів.
+        """
         queryset = super().get_queryset()
 
         # Фільтрація за автомобілем, якщо вказано
@@ -377,6 +693,16 @@ class CarPhotoListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
         return queryset
 
     def get_context_data(self, **kwargs):
+        """
+        Додає до контексту список всіх автомобілів та обраний автомобіль для фільтрації.
+
+        Args:
+            self: Екземпляр класу.
+            **kwargs: Додаткові іменовані аргументи.
+
+        Returns:
+            dict: Контекст з доданими автомобілями та обраним автомобілем.
+        """
         context = super().get_context_data(**kwargs)
         context["cars"] = Car.objects.all()
         context["selected_car"] = self.request.GET.get("car")
@@ -390,9 +716,28 @@ class CarPhotoCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
     success_url = reverse_lazy("car-photo-list")
 
     def test_func(self):
+        """
+        Перевіряє, чи має користувач право на створення фотографії автомобіля.
+
+        Args:
+            self: Екземпляр класу.
+
+        Returns:
+            bool: True, якщо користувач є адміністратором, False - в іншому випадку.
+        """
         return self.request.user.is_staff
 
     def form_valid(self, form):
+        """
+        Обробляє валідну форму при створенні фотографії автомобіля.
+
+        Args:
+            self: Екземпляр класу.
+            form: Валідована форма для створення фотографії.
+
+        Returns:
+            HttpResponse: Відповідь після успішного створення фотографії.
+        """
         messages.success(self.request, f"Фото для автомобіля '{form.instance.car}' успішно додано.")
         return super().form_valid(form)
 
@@ -402,12 +747,42 @@ class CarPhotoDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
     template_name = "photo_confirm_delete.html"
 
     def test_func(self):
+        """
+        Перевіряє, чи має користувач право на видалення фотографії автомобіля.
+
+        Args:
+            self: Екземпляр класу.
+
+        Returns:
+            bool: True, якщо користувач є адміністратором, False - в іншому випадку.
+        """
         return self.request.user.is_staff
 
     def get_success_url(self):
+        """
+        Визначає URL-адресу перенаправлення після успішного видалення фотографії.
+
+        Args:
+            self: Екземпляр класу.
+
+        Returns:
+            str: URL-адреса для перенаправлення.
+        """
         return reverse("car-detail", kwargs={"pk": self.object.car.pk})
 
     def delete(self, request, *args, **kwargs):
+        """
+        Обробляє видалення фотографії автомобіля.
+
+        Args:
+            self: Екземпляр класу.
+            request: Об'єкт запиту.
+            *args: Додаткові позиційні аргументи.
+            **kwargs: Додаткові іменовані аргументи.
+
+        Returns:
+            HttpResponse: Відповідь після успішного видалення фотографії.
+        """
         photo = self.get_object()
         messages.success(request, f"Фото для автомобіля '{photo.car}' успішно видалено.")
         return super().delete(request, *args, **kwargs)
@@ -415,7 +790,16 @@ class CarPhotoDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
 # Представлення для відгуків на автомобілі
 @login_required
 def add_car_review(request, pk):
-    """Представлення для додавання відгуку на автомобіль"""
+    """
+    Представлення для додавання відгуку на автомобіль.
+
+    Args:
+        request: Об'єкт запиту Django.
+        pk: Первинний ключ автомобіля.
+
+    Returns:
+        HttpResponse: Відображення форми додавання відгуку або перенаправлення на сторінку деталей автомобіля.
+    """
     car = get_object_or_404(Car, pk=pk)
 
     # Перевірка, чи залишав користувач вже відгук
@@ -447,7 +831,16 @@ def add_car_review(request, pk):
 
 @login_required
 def edit_car_review(request, pk):
-    """Представлення для редагування відгуку на автомобіль"""
+    """
+    Представлення для редагування відгуку на автомобіль.
+
+    Args:
+        request: Об'єкт запиту Django.
+        pk: Первинний ключ відгуку.
+
+    Returns:
+        HttpResponse: Відображення форми редагування відгуку або перенаправлення на сторінку деталей автомобіля.
+    """
     review = get_object_or_404(CarReview, pk=pk)
 
     # Перевірка, що відгук належить поточному користувачу
@@ -478,7 +871,16 @@ def edit_car_review(request, pk):
 
 @login_required
 def delete_car_review(request, pk):
-    """Представлення для видалення відгуку на автомобіль"""
+    """
+    Представлення для видалення відгуку на автомобіль.
+
+    Args:
+        request: Об'єкт запиту Django.
+        pk: Первинний ключ відгуку.
+
+    Returns:
+        HttpResponse: Відображення сторінки підтвердження видалення або перенаправлення на сторінку деталей автомобіля.
+    """
     review = get_object_or_404(CarReview, pk=pk)
 
     # Перевірка, що відгук належить поточному користувачу або адміну
@@ -505,7 +907,16 @@ def delete_car_review(request, pk):
 
 # API-представлення для отримання автомобіля по ID (для сумісності з JavaScript)
 def get_car_api(request, pk):
-    """API для отримання деталей автомобіля за ID"""
+    """
+    API для отримання деталей автомобіля за ID.
+
+    Args:
+        request: Об'єкт запиту Django.
+        pk: Первинний ключ автомобіля.
+
+    Returns:
+        JsonResponse: JSON-відповідь з даними автомобіля.
+    """
     car = get_object_or_404(Car, pk=pk)
 
     # Створюємо словник з даними автомобіля
@@ -547,6 +958,15 @@ class AvailableCarsView(ListView):
     paginate_by = 12
 
     def get_queryset(self):
+        """
+        Отримує список доступних автомобілів з можливими фільтрами.
+
+        Args:
+            self: Екземпляр класу.
+
+        Returns:
+            QuerySet: Відфільтрований QuerySet доступних автомобілів.
+        """
         queryset = Car.objects.all()
         self.filter_form = CarFilterForm(self.request.GET)
         if self.filter_form.is_valid():
@@ -574,13 +994,31 @@ class AvailableCarsView(ListView):
         return queryset.filter(status="available")
 
     def get_context_data(self, **kwargs):
+        """
+        Додає до контексту форму фільтрації.
+
+        Args:
+            self: Екземпляр класу.
+            **kwargs: Додаткові іменовані аргументи.
+
+        Returns:
+            dict: Контекст з доданою формою фільтрації.
+        """
         context = super().get_context_data(**kwargs)
         context["filter_form"] = self.filter_form
         return context
 
 # Представлення для відображення карти з автомобілями
 def cars_map_view(request):
-    """Представлення для відображення автомобілів на карті"""
+    """
+    Представлення для відображення автомобілів на карті.
+
+    Args:
+        request: Об'єкт запиту Django.
+
+    Returns:
+        HttpResponse: Відображення сторінки з картою автомобілів.
+    """
     # Отримуємо всі автомобілі
     cars = Car.objects.all()
 

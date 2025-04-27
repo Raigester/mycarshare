@@ -30,7 +30,15 @@ class PaymentListView(LoginRequiredMixin, ListView):
     paginate_by = 10
 
     def get_queryset(self):
-        """Отримати відфільтровані платежі для поточного користувача або всі для адміністратора"""
+        """
+        Отримати відфільтровані платежі для поточного користувача або всі для адміністратора.
+
+        Args:
+            self: Екземпляр класу.
+
+        Returns:
+            QuerySet: Відфільтрований та відсортований QuerySet об'єктів Payment.
+        """
         user = self.request.user
 
         # Базовий запит - платежі користувача або всі для адміністратора
@@ -62,7 +70,16 @@ class PaymentListView(LoginRequiredMixin, ListView):
         return queryset.order_by("-created_at")
 
     def get_context_data(self, **kwargs):
-        """Додати форму фільтрації та статистику платежів до контексту"""
+        """
+        Додати форму фільтрації та статистику платежів до контексту.
+
+        Args:
+            self: Екземпляр класу.
+            **kwargs: Додаткові іменовані аргументи.
+
+        Returns:
+            dict: Контекстні дані для шаблону, включаючи форму фільтрації та статистику платежів.
+        """
         context = super().get_context_data(**kwargs)
         context["filter_form"] = PaymentFilterForm(self.request.GET)
 
@@ -104,7 +121,15 @@ class PaymentDetailView(LoginRequiredMixin, DetailView):
     context_object_name = "payment"
 
     def get_queryset(self):
-        """Переконатися, що користувачі можуть бачити лише свої платежі, якщо вони не є адміністраторами"""
+        """
+        Переконатися, що користувачі можуть бачити лише свої платежі, якщо вони не є адміністраторами.
+
+        Args:
+            self: Екземпляр класу.
+
+        Returns:
+            QuerySet: QuerySet об'єктів Payment, відфільтрований за правами доступу.
+        """
         user = self.request.user
         if user.is_staff:
             return Payment.objects.all()
@@ -117,7 +142,16 @@ class CreatePaymentView(LoginRequiredMixin, FormView):
     template_name = "create_payment.html"
 
     def form_valid(self, form):
-        """Обробка платежу"""
+        """
+        Обробка платежу після валідації форми.
+
+        Args:
+            self: Екземпляр класу.
+            form: Екземпляр форми з валідованими даними.
+
+        Returns:
+            HttpResponse: Перенаправлення на відповідну сторінку в залежності від результату обробки.
+        """
         user = self.request.user
         amount = form.cleaned_data["amount"]
         provider = form.cleaned_data["payment_provider"]
@@ -138,7 +172,16 @@ class CreatePaymentView(LoginRequiredMixin, FormView):
         return redirect("payment-list")
 
     def _create_liqpay_payment(self, payment):
-        """Створити платіж LiqPay і перенаправити на сторінку платежу"""
+        """
+        Створити платіж LiqPay і перенаправити на сторінку платежу.
+
+        Args:
+            self: Екземпляр класу.
+            payment: Об'єкт Payment, для якого створюється платіж LiqPay.
+
+        Returns:
+            HttpResponse: Перенаправлення на сторінку обробки платежу або на список платежів у разі помилки.
+        """
         try:
             # Згенерувати унікальний ідентифікатор замовлення
             order_id = f"order_{payment.id}_{payment.user.id}"
@@ -191,7 +234,16 @@ class ProcessPaymentView(LoginRequiredMixin, View):
     """Представлення для обробки платежу через LiqPay"""
 
     def get(self, request):
-        """Показати форму платежу LiqPay"""
+        """
+        Показати форму платежу LiqPay.
+
+        Args:
+            self: Екземпляр класу.
+            request: Об'єкт HTTP запиту.
+
+        Returns:
+            HttpResponse: Рендер сторінки обробки платежу або перенаправлення у разі помилки.
+        """
         # Отримати дані LiqPay із сесії
         liqpay_data = request.session.get("liqpay_data")
 
@@ -221,6 +273,16 @@ class PaymentSuccessView(LoginRequiredMixin, View):
     """Обробка успішних платежів"""
 
     def get(self, request):
+        """
+        Обробка повернення користувача після успішного платежу.
+
+        Args:
+            self: Екземпляр класу.
+            request: Об'єкт HTTP запиту.
+
+        Returns:
+            HttpResponse: Перенаправлення на список платежів з повідомленням про успіх.
+        """
         # Це повідомлення показується після того, як клієнт перенаправлений із платіжної системи
         messages.success(
             request,
@@ -233,6 +295,16 @@ class PaymentCancelView(LoginRequiredMixin, View):
     """Обробка скасованих платежів"""
 
     def get(self, request):
+        """
+        Обробка повернення користувача після скасування платежу.
+
+        Args:
+            self: Екземпляр класу.
+            request: Об'єкт HTTP запиту.
+
+        Returns:
+            HttpResponse: Перенаправлення на список платежів з інформаційним повідомленням.
+        """
         messages.info(request, "Платіж було скасовано.")
         return redirect("payment-list")
 
@@ -241,6 +313,16 @@ class LiqPayCallbackView(View):
     """Обробка зворотних викликів LiqPay"""
 
     def post(self, request):
+        """
+        Обробка зворотних викликів від LiqPay.
+
+        Args:
+            self: Екземпляр класу.
+            request: Об'єкт HTTP запиту.
+
+        Returns:
+            HttpResponse: HTTP відповідь із відповідним статус-кодом.
+        """
         data = request.POST.get("data")
         signature = request.POST.get("signature")
 
@@ -290,7 +372,16 @@ class LiqPayCallbackView(View):
             return HttpResponse(status=500)
 
     def _update_user_balance(self, payment):
-        """Оновити баланс користувача та створити запис транзакції"""
+        """
+        Оновити баланс користувача та створити запис транзакції.
+
+        Args:
+            self: Екземпляр класу.
+            payment: Об'єкт Payment, для якого оновлюється баланс.
+
+        Returns:
+            None: Функція не повертає значення.
+        """
         user = payment.user
         balance, created = UserBalance.objects.get_or_create(user=user)
         balance.amount += payment.amount
@@ -315,7 +406,15 @@ class TransactionListView(LoginRequiredMixin, ListView):
     paginate_by = 15
 
     def get_queryset(self):
-        """Отримати відфільтровані транзакції для поточного користувача або всі для адміністратора"""
+        """
+        Отримати відфільтровані транзакції для поточного користувача або всі для адміністратора.
+
+        Args:
+            self: Екземпляр класу.
+
+        Returns:
+            QuerySet: Відфільтрований та відсортований QuerySet об'єктів PaymentTransaction.
+        """
         user = self.request.user
 
         # Базовий запит - транзакції користувача або всі для адміністратора
@@ -343,7 +442,16 @@ class TransactionListView(LoginRequiredMixin, ListView):
         return queryset.order_by("-created_at")
 
     def get_context_data(self, **kwargs):
-        """Додати форму фільтрації та статистику транзакцій до контексту"""
+        """
+        Додати форму фільтрації та статистику транзакцій до контексту.
+
+        Args:
+            self: Екземпляр класу.
+            **kwargs: Додаткові іменовані аргументи.
+
+        Returns:
+            dict: Контекстні дані для шаблону, включаючи форму фільтрації та статистику транзакцій.
+        """
         context = super().get_context_data(**kwargs)
         context["filter_form"] = TransactionFilterForm(self.request.GET)
 
@@ -380,6 +488,17 @@ class TransactionListView(LoginRequiredMixin, ListView):
 @method_decorator(csrf_exempt, name="dispatch")
 class CancelPaymentActionView(LoginRequiredMixin, View):
     def post(self, request, pk):
+        """
+        Обробка POST-запиту для скасування платежу.
+
+        Args:
+            self: Екземпляр класу.
+            request: Об'єкт HTTP запиту.
+            pk: Первинний ключ платежу, який потрібно скасувати.
+
+        Returns:
+            HttpResponse: Перенаправлення на деталі платежу з відповідним повідомленням.
+        """
         payment = get_object_or_404(Payment, pk=pk, user=request.user)
 
         if payment.status != "pending":

@@ -15,6 +15,15 @@ from .models import Booking, BookingHistory
 
 @login_required
 def start_rental(request):
+    """
+    Обробка початку оренди автомобіля.
+
+    Args:
+        request: Об'єкт запиту Django, що містить дані форми та інформацію про користувача.
+
+    Returns:
+        HttpResponse: Відображення сторінки форми початку оренди або перенаправлення на сторінку деталей бронювання.
+    """
     car_id = request.GET.get("car")
 
     if request.method == "POST":
@@ -78,6 +87,17 @@ def start_rental(request):
 
 @login_required
 def end_rental(request, pk):
+    """
+    Обробка завершення оренди автомобіля.
+
+    Args:
+        request: Об'єкт запиту Django, що містить дані форми та інформацію про користувача.
+        pk: Первинний ключ бронювання, яке потрібно завершити.
+
+    Returns:
+        HttpResponse: Відображення сторінки форми завершення оренди, перенаправлення на список бронювань
+                    або відповідь з забороною доступу.
+    """
     booking = get_object_or_404(Booking, pk=pk)
     if not request.user.is_staff and booking.user != request.user:
         return HttpResponseForbidden("У вас немає доступу до цього бронювання.")
@@ -158,7 +178,15 @@ class ActiveBookingsView(LoginRequiredMixin, ListView):
     context_object_name = "bookings"
 
     def get_queryset(self):
-        """Отримати активні бронювання користувача, які зараз тривають"""
+        """
+        Отримати активні бронювання користувача, які зараз тривають.
+
+        Args:
+            self: Екземпляр класу.
+
+        Returns:
+            QuerySet: Відфільтрований QuerySet з активними бронюваннями поточного користувача.
+        """
         now = timezone.now()
         return Booking.objects.filter(
             user=self.request.user,
@@ -174,7 +202,15 @@ class CompletedBookingsView(LoginRequiredMixin, ListView):
     context_object_name = "bookings"
 
     def get_queryset(self):
-        """Отримати завершені бронювання користувача"""
+        """
+        Отримати завершені бронювання користувача.
+
+        Args:
+            self: Екземпляр класу.
+
+        Returns:
+            QuerySet: Відфільтрований QuerySet із завершеними бронюваннями поточного користувача.
+        """
         return Booking.objects.filter(
             user=self.request.user,
             status="completed"
@@ -183,7 +219,17 @@ class CompletedBookingsView(LoginRequiredMixin, ListView):
 class BookingDetailView(LoginRequiredMixin, View):
     """Представлення для відображення деталей конкретного бронювання"""
     def get(self, request, pk):
-        """Отримати деталі бронювання та історію змін"""
+        """
+        Отримати деталі бронювання та історію змін.
+
+        Args:
+            self: Екземпляр класу.
+            request: Об'єкт запиту Django, що містить інформацію про користувача.
+            pk: Первинний ключ бронювання, деталі якого потрібно отримати.
+
+        Returns:
+            HttpResponse: Відображення сторінки з деталями бронювання або відповідь з забороною доступу.
+        """
         booking = get_object_or_404(Booking, pk=pk)
         if not request.user.is_staff and booking.user != request.user:
             return HttpResponseForbidden("У вас немає доступу до цього бронювання.")

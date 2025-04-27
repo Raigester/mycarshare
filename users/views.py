@@ -1,4 +1,3 @@
-
 from django.contrib import messages
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.decorators import login_required
@@ -26,6 +25,15 @@ class UserRegistrationView(CreateView):
     success_url = reverse_lazy("login")
 
     def form_valid(self, form):
+        """
+        Обробляє валідну форму та зберігає дані користувача.
+
+        Args:
+            form: Валідована форма реєстрації користувача.
+
+        Returns:
+            HttpResponse: Перенаправлення на сторінку успіху.
+        """
         form.save()
         messages.success(self.request, "Акаунт успішно створено! Тепер ви можете увійти.")
         return super().form_valid(form)
@@ -35,6 +43,17 @@ class CustomLoginView(LoginView):
     template_name = "login.html"
 
     def dispatch(self, request, *args, **kwargs):
+        """
+        Перевіряє, чи користувач вже автентифікований, і перенаправляє на профіль якщо так.
+
+        Args:
+            request: HTTP запит.
+            *args: Додаткові позиційні аргументи.
+            **kwargs: Додаткові іменовані аргументи.
+
+        Returns:
+            HttpResponse: Перенаправлення на профіль або стандартна обробка запиту.
+        """
         if request.user.is_authenticated:
             return redirect("profile")
         return super().dispatch(request, *args, **kwargs)
@@ -47,15 +66,38 @@ class UserProfileView(LoginRequiredMixin, UpdateView):
     success_url = reverse_lazy("profile")
 
     def get_object(self):
+        """
+        Отримує об'єкт користувача для редагування.
+
+        Returns:
+            User: Поточний аутентифікований користувач.
+        """
         return self.request.user
 
     def form_valid(self, form):
+        """
+        Обробляє валідну форму оновлення профілю.
+
+        Args:
+            form: Валідована форма оновлення профілю.
+
+        Returns:
+            HttpResponse: Перенаправлення на сторінку успіху.
+        """
         messages.success(self.request, "Ваш профіль успішно оновлено!")
         return super().form_valid(form)
 
 @login_required
 def change_password_view(request):
-    """Представлення для зміни пароля користувача"""
+    """
+    Представлення для зміни пароля користувача.
+
+    Args:
+        request: HTTP запит.
+
+    Returns:
+        HttpResponse: Рендер сторінки зміни пароля або перенаправлення на профіль.
+    """
     if request.method == "POST":
         form = CustomPasswordChangeForm(request.user, request.POST)
         if form.is_valid():
@@ -78,6 +120,17 @@ class DriverLicenseVerificationCreateView(LoginRequiredMixin, CreateView):
     success_url = reverse_lazy("verification-list")
 
     def dispatch(self, request, *args, **kwargs):
+        """
+        Перевіряє, чи користувач вже має активну заявку на верифікацію.
+
+        Args:
+            request: HTTP запит.
+            *args: Додаткові позиційні аргументи.
+            **kwargs: Додаткові іменовані аргументи.
+
+        Returns:
+            HttpResponse: Перенаправлення на список заявок або стандартна обробка запиту.
+        """
         active_verification = DriverLicenseVerification.objects.filter(
             user=request.user,
         ).exclude(status="rejected").order_by("-created_at").first()
@@ -92,6 +145,15 @@ class DriverLicenseVerificationCreateView(LoginRequiredMixin, CreateView):
         return super().dispatch(request, *args, **kwargs)
 
     def form_valid(self, form):
+        """
+        Обробляє валідну форму та зберігає заявку на верифікацію.
+
+        Args:
+            form: Валідована форма верифікації.
+
+        Returns:
+            HttpResponse: Перенаправлення на сторінку успіху.
+        """
         form.instance.user = self.request.user
         messages.success(self.request, "Ваш запит на верифікацію водійських прав надіслано!")
         return super().form_valid(form)
@@ -104,6 +166,12 @@ class DriverLicenseVerificationListView(LoginRequiredMixin, ListView):
     context_object_name = "verifications"
 
     def get_queryset(self):
+        """
+        Отримує список заявок на верифікацію для поточного користувача.
+
+        Returns:
+            QuerySet: Об'єкти верифікації для поточного користувача.
+        """
         return DriverLicenseVerification.objects.filter(user=self.request.user)
 
 class AdminVerificationListView(UserPassesTestMixin, ListView):
@@ -113,9 +181,24 @@ class AdminVerificationListView(UserPassesTestMixin, ListView):
     context_object_name = "verifications"
 
     def test_func(self):
+        """
+        Перевіряє, чи користувач має права адміністратора.
+
+        Returns:
+            bool: True, якщо користувач є адміністратором, інакше False.
+        """
         return self.request.user.is_staff
 
     def get_context_data(self, **kwargs):
+        """
+        Отримує контекстні дані для шаблону, включаючи відфільтровані списки заявок.
+
+        Args:
+            **kwargs: Додаткові іменовані аргументи.
+
+        Returns:
+            dict: Контекстні дані для шаблону.
+        """
         context = super().get_context_data(**kwargs)
         context["pending_verifications"] = DriverLicenseVerification.objects.filter(
             status="pending"
@@ -136,9 +219,24 @@ class AdminVerificationUpdateView(UserPassesTestMixin, UpdateView):
     success_url = reverse_lazy("admin-verification-list")
 
     def test_func(self):
+        """
+        Перевіряє, чи користувач має права адміністратора.
+
+        Returns:
+            bool: True, якщо користувач є адміністратором, інакше False.
+        """
         return self.request.user.is_staff
 
     def form_valid(self, form):
+        """
+        Обробляє валідну форму та оновлює статус заявки на верифікацію.
+
+        Args:
+            form: Валідована форма адміністратора.
+
+        Returns:
+            HttpResponse: Перенаправлення на сторінку успіху.
+        """
         verification = form.save()
 
         # Якщо верифікація схвалена, оновити статус користувача
@@ -154,7 +252,15 @@ class AdminVerificationUpdateView(UserPassesTestMixin, UpdateView):
 
 @login_required
 def user_balance_view(request):
-    """Представлення для відображення та поповнення балансу користувача"""
+    """
+    Представлення для відображення та поповнення балансу користувача.
+
+    Args:
+        request: HTTP запит.
+
+    Returns:
+        HttpResponse: Рендер сторінки балансу або перенаправлення на цю ж сторінку.
+    """
     # Отримати або створити баланс користувача
     balance, created = UserBalance.objects.get_or_create(user=request.user)
 
