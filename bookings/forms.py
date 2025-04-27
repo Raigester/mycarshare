@@ -36,15 +36,12 @@ class BookingStartRentalForm(forms.Form):
         car = cleaned_data.get('car')
         
         if car and self.user:
-            # Перевірка балансу користувача
-            try:
-                balance = self.user.balance
-                min_required = car.price_per_minute * 60  # Мінімум на 1 годину
-                
-                if balance.amount < min_required:
-                    raise ValidationError(f"Недостатньо коштів на балансі. Мінімальний необхідний баланс: {min_required} ₴")
-            except:
-                raise ValidationError("Немає коштів на балансі")
+            balance = getattr(self.user, 'balance', None)
+            
+            min_required = car.price_per_minute * 60
+            
+            if balance.amount < min_required:
+                raise ValidationError(f"Недостатньо коштів на балансі. Мінімальний необхідний баланс: {min_required} ₴")
         
         return cleaned_data
 
