@@ -185,18 +185,6 @@
                                 </div>
                             {% endif %}
                         </div>
-                        
-                        <div class="mb-3">
-                            <label for="{{ form.deposit_amount.id_for_label }}" class="form-label">Сума застави (₴)*</label>
-                            {{ form.deposit_amount }}
-                            {% if form.deposit_amount.errors %}
-                                <div class="invalid-feedback d-block">
-                                    {% for error in form.deposit_amount.errors %}
-                                        {{ error }}
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                        </div>
                     </div>
                     
                     <div class="col-md-6">

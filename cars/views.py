@@ -514,7 +514,6 @@ def get_car_api(request, pk):
         'fuel_type': car.fuel_type,
         'transmission': car.transmission,
         'price_per_minute': str(car.price_per_minute),
-        'deposit_amount': str(car.deposit_amount),
         'engine_capacity': str(car.engine_capacity) if car.engine_capacity else None,
         'power': car.power,
         'seats': car.seats,

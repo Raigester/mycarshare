@@ -32,7 +32,7 @@ class CarForm(forms.ModelForm):
         model = Car
         fields = [
             'model', 'year', 'license_plate', 'color', 'mileage', 
-            'fuel_type', 'transmission', 'price_per_minute', 'deposit_amount',
+            'fuel_type', 'transmission', 'price_per_minute',
             'engine_capacity', 'power', 'seats', 'has_air_conditioning',
             'has_gps', 'has_child_seat', 'has_bluetooth', 'has_usb',
             'status', 'current_latitude', 'current_longitude', 'main_photo',
@@ -47,7 +47,6 @@ class CarForm(forms.ModelForm):
             'fuel_type': forms.Select(attrs={'class': 'form-select'}),
             'transmission': forms.Select(attrs={'class': 'form-select'}),
             'price_per_minute': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
-            'deposit_amount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
             'engine_capacity': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.1', 'min': '0'}),
             'power': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
             'seats': forms.NumberInput(attrs={'class': 'form-control', 'min': '1', 'max': '10'}),

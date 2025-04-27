@@ -55,7 +55,6 @@ class Car(models.Model):
     
     # Rental characteristics
     price_per_minute = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
-    deposit_amount = models.DecimalField(max_digits=10, decimal_places=2)
     
     # Technical specifications
     engine_capacity = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)  # in liters
