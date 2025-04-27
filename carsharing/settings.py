@@ -124,10 +124,10 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'users.User'
 
 # login URL
-LOGIN_REDIRECT_URL = '/api/users/profile/'
+LOGIN_REDIRECT_URL = '/accounts/profile/'
 
 # logout URL
-LOGOUT_REDIRECT_URL = '/api/users/login/'
+LOGOUT_REDIRECT_URL = '/accounts/login/'
 
 # REST Framework settings
 REST_FRAMEWORK = {

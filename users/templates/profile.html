@@ -19,9 +19,9 @@
                     <p class="text-muted">{{ user.email }}</p>
                     
                     {% if user.is_verified_driver %}
-                        <div class="badge bg-success mb-2">Водія підтверджено</div>
+                        <div class="badge bg-success mb-2">Водія верифіковано</div>
                     {% else %}
-                        <div class="badge bg-warning text-dark mb-2">Водія не підтверджено</div>
+                        <div class="badge bg-warning text-dark mb-2">Водія не верифіковано</div>
                         <div>
                             <a href="{% url 'verification-create' %}" class="btn btn-sm btn-outline-primary">Підтвердити</a>
                         </div>

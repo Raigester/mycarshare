@@ -122,7 +122,7 @@
             }
             
             // Запит даних автомобіля через Fetch API
-            fetch(`/api/cars/api/cars/${carId}/`)
+            fetch(`/cars/api/cars/${carId}/`)
                 .then(response => {
                     if (!response.ok) {
                         throw new Error('Не вдалося отримати дані автомобіля');

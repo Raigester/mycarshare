@@ -7,10 +7,10 @@ from rest_framework import permissions
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('core.urls')),
-    path('api/users/', include('users.urls')),
-    path('api/cars/', include('cars.urls')),
-    path('api/bookings/', include('bookings.urls')),
-    path('api/payments/', include('payments.urls')),
+    path('accounts/', include('users.urls')),
+    path('cars/', include('cars.urls')),
+    path('bookings/', include('bookings.urls')),
+    path('payments/', include('payments.urls')),
 ]
 
 # Serving media files in development mode
