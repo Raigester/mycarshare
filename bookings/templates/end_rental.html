@@ -35,9 +35,6 @@
                     <div class="col-md-6">
                         <p><strong>Останнє списання:</strong> {{ booking.last_billing_time|date:"d.m.Y H:i" }}</p>
                     </div>
-                    <div class="col-md-6">
-                        <p><strong>Списано хвилин:</strong> {{ booking.minutes_billed }}</p>
-                    </div>
                 </div>
                 {% endif %}
             </div>
@@ -117,7 +114,7 @@
         function showCarLocation() {
             const carId = "{{ booking.car.id }}";
             
-            fetch(`/api/cars/cars/${carId}/`)
+            fetch(`/api/cars/api/cars/${carId}/`)
                 .then(response => {
                     if (!response.ok) {
                         throw new Error('Не вдалося отримати дані автомобіля');

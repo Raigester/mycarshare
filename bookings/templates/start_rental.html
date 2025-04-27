@@ -93,6 +93,7 @@
         const latitudeInput = document.getElementById('{{ form.latitude.id_for_label }}');
         const longitudeInput = document.getElementById('{{ form.longitude.id_for_label }}');
         const carSelect = document.getElementById('{{ form.car.id_for_label }}');
+        const confirmCheckbox = document.getElementById('{{ form.confirm_start.id_for_label }}');
         const startButton = document.getElementById('start-button');
         
         // Ініціалізація карти з положенням карти за замовчуванням в Києві
@@ -121,7 +122,7 @@
             }
             
             // Запит даних автомобіля через Fetch API
-            fetch(`/api/cars/cars/${carId}/`)
+            fetch(`/api/cars/api/cars/${carId}/`)
                 .then(response => {
                     if (!response.ok) {
                         throw new Error('Не вдалося отримати дані автомобіля');
@@ -165,8 +166,8 @@
                             latitudeInput.value = carLat;
                             longitudeInput.value = carLng;
                             
-                            // Активуємо кнопку запуску
-                            startButton.disabled = false;
+                            // Активуємо кнопку запуску, если также отмечен чекбокс
+                            updateStartButtonState();
                         }
                     } else {
                         // У автомобіля немає координат
@@ -180,15 +181,23 @@
                 });
         }
         
-        // При виборі автомобіля показуємо його місцезнаходження
+        // Функция для обновления состояния кнопки "Начать аренду"
+        function updateStartButtonState() {
+            startButton.disabled = !(carSelect.value && confirmCheckbox.checked && 
+                                latitudeInput.value && longitudeInput.value);
+        }
+        
+        // При выборе автомобиля показываем его местоположение
         carSelect.addEventListener('change', showSelectedCar);
         
-        // Ініціалізація
-        startButton.disabled = !carSelect.value;
+        // При изменении состояния чекбокса обновляем состояние кнопки
+        confirmCheckbox.addEventListener('change', updateStartButtonState);
         
-        // Якщо автомобіль вже вибрано, показуємо його на карті
+        // Инициализация
         if (carSelect.value) {
             showSelectedCar();
+        } else {
+            startButton.disabled = true;
         }
     });
 </script>

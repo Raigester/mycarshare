@@ -1,0 +1,228 @@
+{% extends 'base.html' %}
+
+{% block title %}Доступні автомобілі - MyCarShare{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Доступні автомобілі</h2>
+        <div>
+            <a href="{% url 'car-list' %}" class="btn btn-outline-secondary me-2">Всі автомобілі</a>
+            <a href="{% url 'cars-map' %}?status=available" class="btn btn-info">Карта доступних</a>
+        </div>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-header bg-success text-white">
+            <h4 class="mb-0">Автомобілі доступні для оренди</h4>
+        </div>
+        <div class="card-body">
+            <p>Тут представлені всі автомобілі, які зараз доступні для оренди. Ви можете обрати підходящий автомобіль і почати оренду прямо зараз.</p>
+        </div>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h4 class="mb-0">Фільтр автомобілів</h4>
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label for="{{ filter_form.brand.id_for_label }}" class="form-label">Марка</label>
+                    {{ filter_form.brand }}
+                </div>
+                <div class="col-md-3">
+                    <label for="{{ filter_form.model.id_for_label }}" class="form-label">Модель</label>
+                    {{ filter_form.model }}
+                </div>
+                <div class="col-md-3">
+                    <label for="{{ filter_form.fuel_type.id_for_label }}" class="form-label">Тип палива</label>
+                    {{ filter_form.fuel_type }}
+                </div>
+                <div class="col-md-3">
+                    <label for="{{ filter_form.transmission.id_for_label }}" class="form-label">Трансмісія</label>
+                    {{ filter_form.transmission }}
+                </div>
+                <div class="col-md-3">
+                    <label for="{{ filter_form.min_year.id_for_label }}" class="form-label">Рік від</label>
+                    {{ filter_form.min_year }}
+                </div>
+                <div class="col-md-3">
+                    <label for="{{ filter_form.max_year.id_for_label }}" class="form-label">Рік до</label>
+                    {{ filter_form.max_year }}
+                </div>
+                <div class="col-md-3">
+                    <label for="{{ filter_form.min_seats.id_for_label }}" class="form-label">Мін. місць</label>
+                    {{ filter_form.min_seats }}
+                </div>
+                <div class="col-md-3">
+                    <div class="form-check mt-4">
+                        {{ filter_form.has_air_conditioning }}
+                        <label class="form-check-label" for="{{ filter_form.has_air_conditioning.id_for_label }}">
+                            Кондиціонер
+                        </label>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-check mt-4">
+                        {{ filter_form.has_gps }}
+                        <label class="form-check-label" for="{{ filter_form.has_gps.id_for_label }}">
+                            GPS-навігація
+                        </label>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-check mt-4">
+                        {{ filter_form.has_child_seat }}
+                        <label class="form-check-label" for="{{ filter_form.has_child_seat.id_for_label }}">
+                            Дитяче крісло
+                        </label>
+                    </div>
+                </div>
+                <div class="col-12 mt-3">
+                    <button type="submit" class="btn btn-primary">Застосувати фільтри</button>
+                    <a href="{% url 'available-cars' %}" class="btn btn-outline-secondary">Скинути</a>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    {% if cars %}
+        <div class="row">
+            {% for car in cars %}
+                <div class="col-lg-4 col-md-6 mb-4">
+                    <div class="card h-100">
+                        <div class="position-relative">
+                            {% if car.main_photo %}
+                                <img src="{{ car.main_photo.url }}" class="card-img-top" alt="{{ car.model }}" style="height: 200px; object-fit: cover;">
+                            {% else %}
+                                <div class="bg-light text-center py-5">
+                                    <span class="text-muted">Немає фото</span>
+                                </div>
+                            {% endif %}
+                            <div class="position-absolute top-0 end-0 p-2">
+                                <span class="badge bg-success">Доступний</span>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <h5 class="card-title">{{ car.model.brand.name }} {{ car.model.name }}</h5>
+                            <div class="row mb-2">
+                                <div class="col-6">
+                                    <small class="text-muted">Держ. номер:</small>
+                                    <p class="mb-0">{{ car.license_plate }}</p>
+                                </div>
+                                <div class="col-6">
+                                    <small class="text-muted">Рік:</small>
+                                    <p class="mb-0">{{ car.year }}</p>
+                                </div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-6">
+                                    <small class="text-muted">Колір:</small>
+                                    <p class="mb-0">{{ car.color }}</p>
+                                </div>
+                                <div class="col-6">
+                                    <small class="text-muted">Паливо:</small>
+                                    <p class="mb-0">
+                                        {% if car.fuel_type == 'petrol' %}Бензин
+                                        {% elif car.fuel_type == 'diesel' %}Дизель
+                                        {% elif car.fuel_type == 'electric' %}Електро
+                                        {% elif car.fuel_type == 'hybrid' %}Гібрид
+                                        {% endif %}
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-6">
+                                    <small class="text-muted">Трансмісія:</small>
+                                    <p class="mb-0">
+                                        {% if car.transmission == 'manual' %}Механіка
+                                        {% elif car.transmission == 'automatic' %}Автомат
+                                        {% endif %}
+                                    </p>
+                                </div>
+                                <div class="col-6">
+                                    <small class="text-muted">Місця:</small>
+                                    <p class="mb-0">{{ car.seats }}</p>
+                                </div>
+                            </div>
+                            <hr>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-0">{{ car.price_per_minute }} ₴/хв</h6>
+                                </div>
+                                <div>
+                                    <div class="d-flex align-items-center">
+                                        <span class="me-1">{{ car.rating }}</span>
+                                        <i class="bi bi-star-fill text-warning"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-footer">
+                            <div class="d-grid gap-2">
+                                <a href="{% url 'car-detail' car.id %}" class="btn btn-outline-primary">Детальніше</a>
+                                <a href="{% url 'start-rental' %}?car={{ car.id }}" class="btn btn-success">Орендувати</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+        
+        {% if is_paginated %}
+            <nav aria-label="Page navigation" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">&laquo; Перша</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">Попередня</a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">&laquo; Перша</span>
+                        </li>
+                        <li class="page-item disabled">
+                            <span class="page-link">Попередня</span>
+                        </li>
+                    {% endif %}
+                    
+                    {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ num }}</span>
+                            </li>
+                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ num }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ num }}</a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">Наступна</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">Остання &raquo;</a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">Наступна</span>
+                        </li>
+                        <li class="page-item disabled">
+                            <span class="page-link">Остання &raquo;</span>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        {% endif %}
+    {% else %}
+        <div class="alert alert-warning">
+            На жаль, доступні автомобілі не знайдені. Будь ласка, змініть параметри пошуку або спробуйте пізніше.
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

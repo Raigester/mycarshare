@@ -13,6 +13,8 @@ from .forms import BookingStartRentalForm, BookingEndRentalForm
 
 @login_required
 def start_rental(request):
+    car_id = request.GET.get('car')
+    
     if request.method == 'POST':
         form = BookingStartRentalForm(request.POST, user=request.user)
         if form.is_valid():
@@ -49,7 +51,17 @@ def start_rental(request):
             messages.success(request, f"Оренда автомобіля {car} успішно розпочата!")
             return redirect('booking-detail', pk=booking.id)
     else:
-        form = BookingStartRentalForm(user=request.user)
+        initial_data = {}
+        if car_id:
+            from cars.models import Car
+            try:
+                car = Car.objects.get(id=car_id, status='available')
+                initial_data = {'car': car.id}
+            except Car.DoesNotExist:
+                messages.error(request, "Вибраний автомобіль недоступний для оренди.")
+        
+        form = BookingStartRentalForm(user=request.user, initial=initial_data)
+    
     return render(request, 'start_rental.html', {'form': form})
 
 @login_required

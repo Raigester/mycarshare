@@ -11,7 +11,7 @@
             background-color: #f8f9fa;
         }
         .form-container {
-            max-width: 800px;
+            max-width: 1100px;
             margin: 0 auto;
             padding: 20px;
             background-color: #fff;
@@ -50,6 +50,23 @@
         .verification-status-rejected {
             color: #d9534f;
         }
+        /* Стили для автомобилей */
+        .car-card {
+            transition: transform 0.3s ease;
+        }
+        .car-card:hover {
+            transform: translateY(-5px);
+        }
+        .rating {
+            color: #ffc107;
+            font-size: 1.25rem;
+        }
+        .map-container {
+            height: 600px;
+            width: 100%;
+            border-radius: 0.5rem;
+            overflow: hidden;
+        }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
@@ -65,10 +82,46 @@
                     <li class="nav-item">
                         <a class="nav-link" href="/">Головна</a>
                     </li>
-                    {% if user.is_authenticated %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'profile' %}">Мій профіль</a>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownCars" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            Автомобілі
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="navbarDropdownCars">
+                            <li><a class="dropdown-item" href="{% url 'car-list' %}">Усі автомобілі</a></li>
+                            <li><a class="dropdown-item" href="{% url 'available-cars' %}">Доступні для оренди</a></li>
+                            <li><a class="dropdown-item" href="{% url 'cars-map' %}">Карта автомобілів</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{% url 'car-brand-list' %}">Марки автомобілів</a></li>
+                            <li><a class="dropdown-item" href="{% url 'car-model-list' %}">Моделі автомобілів</a></li>
+                            {% if user.is_staff %}
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{% url 'car-create' %}">Додати автомобіль</a></li>
+                            <li><a class="dropdown-item" href="{% url 'car-brand-create' %}">Додати марку</a></li>
+                            <li><a class="dropdown-item" href="{% url 'car-model-create' %}">Додати модель</a></li>
+                            <li><a class="dropdown-item" href="{% url 'car-photo-list' %}">Управління фотографіями</a></li>
+                            {% endif %}
+                        </ul>
                     </li>
+                    
+                    {% if user.is_authenticated %}
+                    <!-- Новое выпадающее меню "Користувач" -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownUser" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            Користувач
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="navbarDropdownUser">
+                            <li><a class="dropdown-item" href="{% url 'profile' %}">Мій профіль</a></li>
+                            <li><a class="dropdown-item" href="{% url 'verification-list' %}">Верифікація</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <form method="post" action="{% url 'logout' %}" class="d-inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="dropdown-item">Вийти</button>
+                                </form>
+                            </li>
+                        </ul>
+                    </li>
+                    
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownPayments" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                             Фінанси
@@ -91,12 +144,17 @@
                             <li><a class="dropdown-item" href="{% url 'start-rental' %}">Почати оренду</a></li>
                         </ul>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'verification-list' %}">Верифікація</a>
-                    </li>
+                    
                     {% if user.is_staff %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'admin-verification-list' %}">Запити на верифікацію</a>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownAdmin" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            Адміністрування
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="navbarDropdownAdmin">
+                            <li><a class="dropdown-item" href="{% url 'admin-verification-list' %}">Запити на верифікацію</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="/admin/">Панель адміністратора</a></li>
+                        </ul>
                     </li>
                     {% endif %}
                     {% endif %}
@@ -104,14 +162,8 @@
 
                 <ul class="navbar-nav d-flex align-items-center ms-auto">
                     {% if user.is_authenticated %}
-                    <li class="nav-item d-flex align-items-center">
+                    <li class="nav-item">
                         <span class="nav-link">{{ user.username }}</span>
-                        <form method="post" action="{% url 'logout' %}" class="d-inline ms-2">
-                            {% csrf_token %}
-                            <button type="submit" class="btn btn-link nav-link" style="padding: 0; background: none; border: none;">
-                                Вийти
-                            </button>
-                        </form>
                     </li>
                     {% else %}
                     <li class="nav-item">

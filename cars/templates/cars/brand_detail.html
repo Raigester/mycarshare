@@ -1,0 +1,145 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ brand.name }} - MyCarShare{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>{{ brand.name }}</h2>
+        <div>
+            <a href="{% url 'car-brand-list' %}" class="btn btn-outline-secondary me-2">Назад до марок</a>
+            {% if user.is_staff %}
+            <div class="btn-group">
+                <a href="{% url 'car-brand-update' brand.id %}" class="btn btn-outline-primary">Змінити</a>
+                <a href="{% url 'car-brand-delete' brand.id %}" class="btn btn-outline-danger">Видалити</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">Інформація про марку</h4>
+                </div>
+                <div class="card-body">
+                    {% if brand.logo %}
+                        <div class="text-center mb-3">
+                            <img src="{{ brand.logo.url }}" alt="{{ brand.name }}" style="max-height: 150px; max-width: 100%;">
+                        </div>
+                    {% endif %}
+                    <h3 class="card-title text-center">{{ brand.name }}</h3>
+                </div>
+                <div class="card-footer">
+                    <div class="d-flex justify-content-between">
+                        <div>Моделей: <strong>{{ models|length }}</strong></div>
+                        <div>Автомобілів: <strong>{{ models|join:''|length }}</strong></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">Моделі {{ brand.name }}</h4>
+                    {% if user.is_staff %}
+                    <a href="{% url 'car-model-create' %}?brand={{ brand.id }}" class="btn btn-sm btn-primary">Додати модель</a>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    {% if models %}
+                        <div class="list-group">
+                            {% for model in models %}
+                                <a href="{% url 'car-model-detail' model.id %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h5 class="mb-1">{{ model.name }}</h5>
+                                        <small>Автомобілів: {{ model.cars.count }}</small>
+                                    </div>
+                                    {% if user.is_staff %}
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{% url 'car-model-update' model.id %}" class="btn btn-outline-secondary">Змінити</a>
+                                        <a href="{% url 'car-model-delete' model.id %}" class="btn btn-outline-danger">Видалити</a>
+                                    </div>
+                                    {% endif %}
+                                </a>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            Для цієї марки поки немає моделей.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">
+            <h4 class="mb-0">Автомобілі {{ brand.name }}</h4>
+        </div>
+        <div class="card-body">
+            {% if brand.models.all %}
+                {% with total_cars=0 %}
+                    {% for model in models %}
+                        {% if model.cars.exists %}
+                            <h5 class="mb-3">{{ model.name }}</h5>
+                            <div class="row mb-4">
+                                {% for car in model.cars.all %}
+                                    {% with total_cars=total_cars|add:1 %}{% endwith %}
+                                    <div class="col-md-4 mb-3">
+                                        <div class="card h-100">
+                                            <div class="position-relative">
+                                                {% if car.main_photo %}
+                                                    <img src="{{ car.main_photo.url }}" class="card-img-top" alt="{{ car }}" style="height: 150px; object-fit: cover;">
+                                                {% else %}
+                                                    <div class="bg-light text-center py-5">
+                                                        <span class="text-muted">Немає фото</span>
+                                                    </div>
+                                                {% endif %}
+                                                <div class="position-absolute top-0 end-0 p-2">
+                                                    {% if car.status == 'available' %}
+                                                        <span class="badge bg-success">Доступний</span>
+                                                    {% elif car.status == 'busy' %}
+                                                        <span class="badge bg-warning text-dark">Зайнятий</span>
+                                                    {% elif car.status == 'maintenance' %}
+                                                        <span class="badge bg-danger">На обслуговуванні</span>
+                                                    {% elif car.status == 'inactive' %}
+                                                        <span class="badge bg-secondary">Неактивний</span>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            <div class="card-body">
+                                                <h6 class="card-title">{{ car.license_plate }}</h6>
+                                                <p class="card-text">
+                                                    {{ car.year }}, {{ car.color }}<br>
+                                                    {{ car.price_per_minute }} ₴/хв
+                                                </p>
+                                            </div>
+                                            <div class="card-footer">
+                                                <a href="{% url 'car-detail' car.id %}" class="btn btn-sm btn-outline-primary w-100">Детальніше</a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if total_cars == 0 %}
+                        <div class="alert alert-info">
+                            Автомобілі цієї марки не знайдені.
+                        </div>
+                    {% endif %}
+                {% endwith %}
+            {% else %}
+                <div class="alert alert-info">
+                    Автомобілі цієї марки не знайдені.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

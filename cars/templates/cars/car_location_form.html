@@ -1,0 +1,232 @@
+{% extends 'base.html' %}
+
+{% block title %}Оновлення місцезнаходження {{ car.model.brand.name }} {{ car.model.name }} - MyCarShare{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<style>
+    #map {
+        height: 400px;
+        width: 100%;
+        border-radius: 0.25rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Оновлення місцезнаходження автомобіля</h2>
+        <div>
+            <a href="{% url 'car-detail' car.id %}" class="btn btn-outline-secondary">Назад</a>
+        </div>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-header bg-info text-white">
+            <h4 class="mb-0">{{ car.model.brand.name }} {{ car.model.name }} ({{ car.license_plate }})</h4>
+        </div>
+        <div class="card-body">
+            <div class="row mb-4">
+                <div class="col-md-4">
+                    {% if car.main_photo %}
+                        <img src="{{ car.main_photo.url }}" alt="{{ car.model.brand.name }} {{ car.model.name }}" class="img-fluid rounded">
+                    {% else %}
+                        <div class="bg-light text-center py-5 rounded">
+                            <span class="text-muted">Фото відсутнє</span>
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="col-md-8">
+                    <h5>Інформація про автомобіль:</h5>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <p><strong>Марка і модель:</strong> {{ car.model.brand.name }} {{ car.model.name }}</p>
+                            <p><strong>Держ. номер:</strong> {{ car.license_plate }}</p>
+                            <p><strong>Колір:</strong> {{ car.color }}</p>
+                            <p><strong>Рік:</strong> {{ car.year }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Статус:</strong> 
+                                {% if car.status == 'available' %}
+                                    <span class="badge bg-success">Доступний</span>
+                                {% elif car.status == 'busy' %}
+                                    <span class="badge bg-warning text-dark">Зайнятий</span>
+                                {% elif car.status == 'maintenance' %}
+                                    <span class="badge bg-danger">На обслуговуванні</span>
+                                {% elif car.status == 'inactive' %}
+                                    <span class="badge bg-secondary">Неактивний</span>
+                                {% endif %}
+                            </p>
+                            <p><strong>Поточна широта:</strong> {{ car.current_latitude|default:"Не вказана" }}</p>
+                            <p><strong>Поточна довгота:</strong> {{ car.current_longitude|default:"Не вказана" }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Інтерактивна карта</h5>
+                </div>
+                <div class="card-body">
+                    <div id="map"></div>
+                    <p class="mt-2 text-muted">Клацніть на карті, щоб встановити нове місцезнаходження автомобіля, або введіть координати вручну нижче.</p>
+                </div>
+            </div>
+            
+            <form method="post">
+                {% csrf_token %}
+                
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {% for error in form.non_field_errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="{{ form.latitude.id_for_label }}" class="form-label">Широта*</label>
+                        {{ form.latitude }}
+                        {% if form.latitude.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.latitude.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label for="{{ form.longitude.id_for_label }}" class="form-label">Довгота*</label>
+                        {{ form.longitude }}
+                        {% if form.longitude.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.longitude.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary">Оновити місцезнаходження</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Ініціалізація карти з центром у Києві (або іншому місті за замовчуванням)
+        const defaultPosition = [50.4501, 30.5234];
+        const map = L.map('map').setView(defaultPosition, 12);
+        
+        // Додавання шару OpenStreetMap
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+        
+        // Отримання полів форми
+        const latitudeInput = document.getElementById('{{ form.latitude.id_for_label }}');
+        const longitudeInput = document.getElementById('{{ form.longitude.id_for_label }}');
+        
+        // Створення маркера
+        let marker;
+        
+        // Перевірка, чи є вже координати у автомобіля
+        const carLatitude = "{{ car.current_latitude }}";
+        const carLongitude = "{{ car.current_longitude }}";
+        
+        if (carLatitude && carLongitude && carLatitude !== "None" && carLongitude !== "None") {
+            const carLat = parseFloat(carLatitude);
+            const carLng = parseFloat(carLongitude);
+            
+            if (!isNaN(carLat) && !isNaN(carLng)) {
+                // Встановлення центру карти
+                map.setView([carLat, carLng], 15);
+                
+                // Створення маркера поточного місцезнаходження
+                marker = L.marker([carLat, carLng], {
+                    draggable: true,
+                    title: "{{ car.model.brand.name }} {{ car.model.name }}"
+                }).addTo(map);
+                
+                // Оновлення полів форми при перетягуванні маркера
+                marker.on('dragend', function(event) {
+                    const position = marker.getLatLng();
+                    latitudeInput.value = position.lat.toFixed(6);
+                    longitudeInput.value = position.lng.toFixed(6);
+                });
+            }
+        } else {
+            // Якщо координат немає, створюємо маркер за кліком на карту
+            marker = null;
+        }
+        
+        // Додавання можливості створення/переміщення маркера за кліком
+        map.on('click', function(e) {
+            const clickedLat = e.latlng.lat.toFixed(6);
+            const clickedLng = e.latlng.lng.toFixed(6);
+            
+            // Оновлення полів форми
+            latitudeInput.value = clickedLat;
+            longitudeInput.value = clickedLng;
+            
+            // Якщо маркер вже існує - переміщуємо його
+            if (marker) {
+                marker.setLatLng(e.latlng);
+            } else {
+                // Інакше - створюємо новий маркер
+                marker = L.marker(e.latlng, {
+                    draggable: true,
+                    title: "{{ car.model.brand.name }} {{ car.model.name }}"
+                }).addTo(map);
+                
+                // Оновлення полів форми при перетягуванні маркера
+                marker.on('dragend', function(event) {
+                    const position = marker.getLatLng();
+                    latitudeInput.value = position.lat.toFixed(6);
+                    longitudeInput.value = position.lng.toFixed(6);
+                });
+            }
+        });
+        
+        // Оновлення маркера при зміні полів форми вручну
+        latitudeInput.addEventListener('change', updateMarkerFromInputs);
+        longitudeInput.addEventListener('change', updateMarkerFromInputs);
+        
+        function updateMarkerFromInputs() {
+            const lat = parseFloat(latitudeInput.value);
+            const lng = parseFloat(longitudeInput.value);
+            
+            if (!isNaN(lat) && !isNaN(lng)) {
+                const newLatLng = L.latLng(lat, lng);
+                
+                if (marker) {
+                    marker.setLatLng(newLatLng);
+                } else {
+                    marker = L.marker(newLatLng, {
+                        draggable: true,
+                        title: "{{ car.model.brand.name }} {{ car.model.name }}"
+                    }).addTo(map);
+                    
+                    marker.on('dragend', function(event) {
+                        const position = marker.getLatLng();
+                        latitudeInput.value = position.lat.toFixed(6);
+                        longitudeInput.value = position.lng.toFixed(6);
+                    });
+                }
+                
+                map.setView(newLatLng, 15);
+            }
+        }
+    });
+</script>
+{% endblock %}

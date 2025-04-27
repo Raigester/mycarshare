@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+
+{% block title %}Зміна статусу {{ car.model.brand.name }} {{ car.model.name }} - MyCarShare{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Зміна статусу автомобіля</h2>
+        <div>
+            <a href="{% url 'car-detail' car.id %}" class="btn btn-outline-secondary">Назад</a>
+        </div>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-header bg-warning text-dark">
+            <h4 class="mb-0">{{ car.model.brand.name }} {{ car.model.name }} ({{ car.license_plate }})</h4>
+        </div>
+        <div class="card-body">
+            <div class="row mb-4">
+                <div class="col-md-4">
+                    {% if car.main_photo %}
+                        <img src="{{ car.main_photo.url }}" alt="{{ car.model.brand.name }} {{ car.model.name }}" class="img-fluid rounded">
+                    {% else %}
+                        <div class="bg-light text-center py-5 rounded">
+                            <span class="text-muted">Фото відсутнє</span>
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="col-md-8">
+                    <h5>Інформація про автомобіль:</h5>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <p><strong>Марка і модель:</strong> {{ car.model.brand.name }} {{ car.model.name }}</p>
+                            <p><strong>Держ. номер:</strong> {{ car.license_plate }}</p>
+                            <p><strong>Колір:</strong> {{ car.color }}</p>
+                            <p><strong>Рік:</strong> {{ car.year }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Поточний статус:</strong> 
+                                {% if car.status == 'available' %}
+                                    <span class="badge bg-success">Доступний</span>
+                                {% elif car.status == 'busy' %}
+                                    <span class="badge bg-warning text-dark">Зайнятий</span>
+                                {% elif car.status == 'maintenance' %}
+                                    <span class="badge bg-danger">На обслуговуванні</span>
+                                {% elif car.status == 'inactive' %}
+                                    <span class="badge bg-secondary">Неактивний</span>
+                                {% endif %}
+                            </p>
+                            <p><strong>Місцезнаходження:</strong> 
+                                {% if car.current_latitude and car.current_longitude %}
+                                    <a href="{% url 'update-car-location' car.id %}" class="text-decoration-none">
+                                        Вказано <i class="bi bi-geo-alt-fill text-info"></i>
+                                    </a>
+                                {% else %}
+                                    <a href="{% url 'update-car-location' car.id %}" class="text-decoration-none text-danger">
+                                        Не вказано <i class="bi bi-geo-alt"></i>
+                                    </a>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <form method="post">
+                {% csrf_token %}
+                
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {% for error in form.non_field_errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                
+                <div class="mb-4">
+                    <label for="{{ form.status.id_for_label }}" class="form-label">Новий статус автомобіля*</label>
+                    {{ form.status }}
+                    {% if form.status.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.status.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    
+                    <div class="form-text mt-2">
+                        <ul>
+                            <li><strong>Доступний</strong> - автомобіль готовий до оренди.</li>
+                            <li><strong>Зайнятий</strong> - автомобіль зараз знаходиться в оренді.</li>
+                            <li><strong>На обслуговуванні</strong> - автомобіль проходить технічне обслуговування або ремонт.</li>
+                            <li><strong>Неактивний</strong> - автомобіль тимчасово або постійно виключений з автопарку.</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary">Змінити статус</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

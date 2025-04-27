@@ -1,0 +1,213 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ model.brand.name }} {{ model.name }} - MyCarShare{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>{{ model.brand.name }} {{ model.name }}</h2>
+        <div>
+            <a href="{% url 'car-model-list' %}" class="btn btn-outline-secondary me-2">Назад до моделей</a>
+            {% if user.is_staff %}
+            <div class="btn-group">
+                <a href="{% url 'car-model-update' model.id %}" class="btn btn-outline-primary">Змінити</a>
+                <a href="{% url 'car-model-delete' model.id %}" class="btn btn-outline-danger">Видалити</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">Інформація про модель</h4>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <h5>Марка:</h5>
+                        <p class="h4">
+                            <a href="{% url 'car-brand-detail' model.brand.id %}">{{ model.brand.name }}</a>
+                        </p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h5>Модель:</h5>
+                        <p class="h3">{{ model.name }}</p>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="text-center">
+                        Кількість автомобілів: <strong>{{ cars|length }}</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">Статистика</h4>
+                    {% if user.is_staff %}
+                    <a href="{% url 'car-create' %}?model={{ model.id }}" class="btn btn-sm btn-primary">Додати автомобіль</a>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-3 mb-3">
+                            <div class="p-3 bg-light rounded">
+                                <h5>Всього</h5>
+                                <span class="display-6">{{ cars|length }}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="p-3 bg-success bg-opacity-25 rounded">
+                                <h5>Доступно</h5>
+                                <span class="display-6 text-success">
+                                    {% with available_count=0 %}
+                                        {% for car in cars %}
+                                            {% if car.status == 'available' %}
+                                                {% with available_count=available_count|add:1 %}{% endwith %}
+                                            {% endif %}
+                                        {% endfor %}
+                                        {{ available_count }}
+                                    {% endwith %}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="p-3 bg-warning bg-opacity-25 rounded">
+                                <h5>Зайнято</h5>
+                                <span class="display-6 text-warning">
+                                    {% with busy_count=0 %}
+                                        {% for car in cars %}
+                                            {% if car.status == 'busy' %}
+                                                {% with busy_count=busy_count|add:1 %}{% endwith %}
+                                            {% endif %}
+                                        {% endfor %}
+                                        {{ busy_count }}
+                                    {% endwith %}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="p-3 bg-danger bg-opacity-25 rounded">
+                                <h5>Ремонт</h5>
+                                <span class="display-6 text-danger">
+                                    {% with maintenance_count=0 %}
+                                        {% for car in cars %}
+                                            {% if car.status == 'maintenance' %}
+                                                {% with maintenance_count=maintenance_count|add:1 %}{% endwith %}
+                                            {% endif %}
+                                        {% endfor %}
+                                        {{ maintenance_count }}
+                                    {% endwith %}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">
+            <h4 class="mb-0">Автомобілі {{ model.brand.name }} {{ model.name }}</h4>
+        </div>
+        <div class="card-body">
+            {% if cars %}
+                <div class="row">
+                    {% for car in cars %}
+                        <div class="col-lg-4 col-md-6 mb-4">
+                            <div class="card h-100">
+                                <div class="position-relative">
+                                    {% if car.main_photo %}
+                                        <img src="{{ car.main_photo.url }}" class="card-img-top" alt="{{ car }}" style="height: 200px; object-fit: cover;">
+                                    {% else %}
+                                        <div class="bg-light text-center py-5">
+                                            <span class="text-muted">Немає фото</span>
+                                        </div>
+                                    {% endif %}
+                                    <div class="position-absolute top-0 end-0 p-2">
+                                        {% if car.status == 'available' %}
+                                            <span class="badge bg-success">Доступний</span>
+                                        {% elif car.status == 'busy' %}
+                                            <span class="badge bg-warning text-dark">Зайнятий</span>
+                                        {% elif car.status == 'maintenance' %}
+                                            <span class="badge bg-danger">На обслуговуванні</span>
+                                        {% elif car.status == 'inactive' %}
+                                            <span class="badge bg-secondary">Неактивний</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <h5 class="card-title">{{ car.license_plate }}</h5>
+                                    <div class="row mb-2">
+                                        <div class="col-6">
+                                            <small class="text-muted">Рік:</small>
+                                            <p class="mb-0">{{ car.year }}</p>
+                                        </div>
+                                        <div class="col-6">
+                                            <small class="text-muted">Колір:</small>
+                                            <p class="mb-0">{{ car.color }}</p>
+                                        </div>
+                                    </div>
+                                    <div class="row mb-2">
+                                        <div class="col-6">
+                                            <small class="text-muted">Паливо:</small>
+                                            <p class="mb-0">
+                                                {% if car.fuel_type == 'petrol' %}Бензин
+                                                {% elif car.fuel_type == 'diesel' %}Дизель
+                                                {% elif car.fuel_type == 'electric' %}Електро
+                                                {% elif car.fuel_type == 'hybrid' %}Гібрид
+                                                {% endif %}
+                                            </p>
+                                        </div>
+                                        <div class="col-6">
+                                            <small class="text-muted">Трансмісія:</small>
+                                            <p class="mb-0">
+                                                {% if car.transmission == 'manual' %}Механіка
+                                                {% elif car.transmission == 'automatic' %}Автомат
+                                                {% endif %}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <hr>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h6 class="mb-0">{{ car.price_per_minute }} ₴/хв</h6>
+                                        </div>
+                                        <div>
+                                            <div class="d-flex align-items-center">
+                                                <span class="me-1">{{ car.rating }}</span>
+                                                <i class="bi bi-star-fill text-warning"></i>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="card-footer">
+                                    <div class="d-grid gap-2">
+                                        <a href="{% url 'car-detail' car.id %}" class="btn btn-outline-primary">Детальніше</a>
+                                        {% if user.is_staff %}
+                                        <div class="btn-group">
+                                            <a href="{% url 'car-update' car.id %}" class="btn btn-outline-secondary">Змінити</a>
+                                            <a href="{% url 'update-car-location' car.id %}" class="btn btn-outline-info">Локація</a>
+                                            <a href="{% url 'change-car-status' car.id %}" class="btn btn-outline-warning">Статус</a>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="alert alert-info">
+                    Автомобілі цієї моделі не знайдені.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

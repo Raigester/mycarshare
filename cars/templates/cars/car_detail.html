@@ -1,0 +1,375 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ car.model.brand.name }} {{ car.model.name }} - MyCarShare{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<style>
+    #map {
+        height: 300px;
+        width: 100%;
+        border-radius: 0.25rem;
+    }
+    
+    .rating {
+        color: #ffc107;
+        font-size: 1.25rem;
+    }
+    
+    .review-card {
+        transition: transform 0.3s;
+    }
+    
+    .review-card:hover {
+        transform: translateY(-5px);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>{{ car.model.brand.name }} {{ car.model.name }}</h2>
+        <div>
+            <a href="{% url 'car-list' %}" class="btn btn-outline-secondary">Назад до списку</a>
+            {% if user.is_staff %}
+            <div class="btn-group ms-2">
+                <a href="{% url 'car-update' car.id %}" class="btn btn-outline-primary">Змінити</a>
+                <a href="{% url 'update-car-location' car.id %}" class="btn btn-outline-info">Локація</a>
+                <a href="{% url 'change-car-status' car.id %}" class="btn btn-outline-warning">Статус</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-body p-0">
+                    {% if car.main_photo %}
+                        <img src="{{ car.main_photo.url }}" class="img-fluid rounded" alt="{{ car.model }}">
+                    {% else %}
+                        <div class="bg-light text-center py-5">
+                            <span class="text-muted">Фото відсутнє</span>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            {% if photos %}
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Галерея фотографій</h5>
+                    {% if user.is_staff %}
+                    <div class="btn-group">
+                        <a href="{% url 'car-photo-create' %}?car={{ car.id }}" class="btn btn-sm btn-success">
+                            <i class="bi bi-plus-lg"></i> Додати
+                        </a>
+                        <a href="{% url 'car-photo-list' %}?car={{ car.id }}" class="btn btn-sm btn-primary">
+                            <i class="bi bi-images"></i> Управління фото
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for photo in photos %}
+                            <div class="col-4 mb-3">
+                                <div class="position-relative">
+                                    <a href="{{ photo.photo.url }}" target="_blank">
+                                        <img src="{{ photo.photo.url }}" class="img-fluid rounded" alt="{{ photo.caption|default:car.model }}">
+                                    </a>
+                                    {% if user.is_staff %}
+                                    <a href="{% url 'car-photo-delete' photo.id %}" class="position-absolute top-0 end-0 btn btn-sm btn-danger m-1" title="Видалити фото">
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                                {% if photo.caption %}
+                                <small class="text-muted d-block text-center mt-1">{{ photo.caption }}</small>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% if user.is_staff and not photos %}
+                <div class="card-footer text-center">
+                    <a href="{% url 'car-photo-create' %}?car={{ car.id }}" class="btn btn-success">
+                        <i class="bi bi-plus-lg"></i> Додати фотографії
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+            {% elif user.is_staff %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Галерея фотографій</h5>
+                </div>
+                <div class="card-body text-center">
+                    <p class="text-muted">У цього автомобіля ще немає додаткових фотографій</p>
+                    <a href="{% url 'car-photo-create' %}?car={{ car.id }}" class="btn btn-success">
+                        <i class="bi bi-plus-lg"></i> Додати фотографії
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Інформація про автомобіль</h5>
+                    <div>
+                        {% if car.status == 'available' %}
+                            <span class="badge bg-success">Доступний</span>
+                        {% elif car.status == 'busy' %}
+                            <span class="badge bg-warning text-dark">Зайнятий</span>
+                        {% elif car.status == 'maintenance' %}
+                            <span class="badge bg-danger">На обслуговуванні</span>
+                        {% elif car.status == 'inactive' %}
+                            <span class="badge bg-secondary">Неактивний</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <p><strong>Рік випуску:</strong> {{ car.year }}</p>
+                            <p><strong>Номерний знак:</strong> {{ car.license_plate }}</p>
+                            <p><strong>Колір:</strong> {{ car.color }}</p>
+                            <p><strong>Пробіг:</strong> {{ car.mileage }} км</p>
+                            <p><strong>Паливо:</strong> 
+                                {% if car.fuel_type == 'petrol' %}Бензин
+                                {% elif car.fuel_type == 'diesel' %}Дизель
+                                {% elif car.fuel_type == 'electric' %}Електро
+                                {% elif car.fuel_type == 'hybrid' %}Гібрид
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Трансмісія:</strong> 
+                                {% if car.transmission == 'manual' %}Механіка
+                                {% elif car.transmission == 'automatic' %}Автомат
+                                {% endif %}
+                            </p>
+                            <p><strong>Кількість місць:</strong> {{ car.seats }}</p>
+                            {% if car.engine_capacity %}
+                                <p><strong>Об'єм двигуна:</strong> {{ car.engine_capacity }} л</p>
+                            {% endif %}
+                            {% if car.power %}
+                                <p><strong>Потужність:</strong> {{ car.power }} к.с.</p>
+                            {% endif %}
+                            <p><strong>Рейтинг:</strong> 
+                                <span class="rating">
+                                    {{ car.rating|floatformat:1 }} &#9733;
+                                </span>
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <h6>Додаткові опції:</h6>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <ul class="list-group">
+                                <li class="list-group-item {% if car.has_air_conditioning %}bg-light{% endif %}">
+                                    <i class="bi {% if car.has_air_conditioning %}bi-check-circle-fill text-success{% else %}bi-x-circle-fill text-danger{% endif %} me-2"></i>
+                                    Кондиціонер
+                                </li>
+                                <li class="list-group-item {% if car.has_gps %}bg-light{% endif %}">
+                                    <i class="bi {% if car.has_gps %}bi-check-circle-fill text-success{% else %}bi-x-circle-fill text-danger{% endif %} me-2"></i>
+                                    GPS-навігація
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <ul class="list-group">
+                                <li class="list-group-item {% if car.has_child_seat %}bg-light{% endif %}">
+                                    <i class="bi {% if car.has_child_seat %}bi-check-circle-fill text-success{% else %}bi-x-circle-fill text-danger{% endif %} me-2"></i>
+                                    Дитяче крісло
+                                </li>
+                                <li class="list-group-item {% if car.has_bluetooth %}bg-light{% endif %}">
+                                    <i class="bi {% if car.has_bluetooth %}bi-check-circle-fill text-success{% else %}bi-x-circle-fill text-danger{% endif %} me-2"></i>
+                                    Bluetooth
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                        
+                    <hr>
+                        
+                    <div class="price-info mt-3">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Вартість:</strong></p>
+                                <p class="h4 mb-0">{{ car.price_per_minute }} ₴/хв</p>
+                            </div>
+                            <div class="col-md-6">
+                                <p><strong>Застава:</strong></p>
+                                <p class="h4 mb-0">{{ car.deposit_amount }} ₴</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    {% if car.status == 'available' %}
+                        <a href="{% url 'start-rental' %}?car={{ car.id }}" class="btn btn-success w-100">Орендувати</a>
+                    {% else %}
+                        <button class="btn btn-secondary w-100" disabled>Недоступний для оренди</button>
+                    {% endif %}
+                </div>
+            </div>
+                
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Місцезнаходження автомобіля</h5>
+                </div>
+                <div class="card-body">
+                    <div id="map"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">Відгуки</h4>
+                {% if user.is_authenticated and not user_review %}
+                    <a href="{% url 'add-car-review' car.id %}" class="btn btn-primary btn-sm">Залишити відгук</a>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                {% if reviews %}
+                    <div class="row">
+                        {% for review in reviews %}
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100 review-card">
+                                    <div class="card-header d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <strong>{{ review.user.get_full_name|default:review.user.username }}</strong>
+                                        </div>
+                                        <div class="rating">
+                                            {{ review.rating }} &#9733;
+                                        </div>
+                                    </div>
+                                    <div class="card-body">
+                                        <p class="card-text">{{ review.comment }}</p>
+                                        <small class="text-muted">{{ review.created_at|date:"d.m.Y H:i" }}</small>
+                                    </div>
+                                    {% if user.is_authenticated and review.user == user or user.is_staff %}
+                                        <div class="card-footer">
+                                            <div class="btn-group w-100">
+                                                <a href="{% url 'edit-car-review' review.id %}" class="btn btn-sm btn-outline-primary">Редагувати</a>
+                                                <a href="{% url 'delete-car-review' review.id %}" class="btn btn-sm btn-outline-danger">Видалити</a>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="alert alert-info">
+                        У цього автомобіля поки немає відгуків. 
+                        {% if user.is_authenticated %}
+                            <a href="{% url 'add-car-review' car.id %}" class="alert-link">Будьте першим, хто залишить відгук!</a>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        {% if user_review %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Ваш відгук</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h5>Рейтинг: <span class="rating">{{ user_review.rating }} &#9733;</span></h5>
+                        <small class="text-muted">{{ user_review.created_at|date:"d.m.Y H:i" }}</small>
+                    </div>
+                    <p>{{ user_review.comment }}</p>
+                    <div class="btn-group">
+                        <a href="{% url 'edit-car-review' user_review.id %}" class="btn btn-sm btn-outline-primary">Редагувати</a>
+                        <a href="{% url 'delete-car-review' user_review.id %}" class="btn btn-sm btn-outline-danger">Видалити</a>
+                    </div>
+                </div>
+            </div>
+        {% elif user.is_authenticated and not reviews %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Залишити відгук</h5>
+                </div>
+                <div class="card-body">
+                    {% if review_form %}
+                        <form method="post" action="{% url 'add-car-review' car.id %}">
+                            {% csrf_token %}
+                            
+                            <input type="hidden" name="car" value="{{ car.id }}">
+                            
+                            <div class="mb-3">
+                                <label for="{{ review_form.rating.id_for_label }}" class="form-label">Рейтинг (від 1 до 5)</label>
+                                <input type="number" class="form-control" id="{{ review_form.rating.id_for_label }}" name="{{ review_form.rating.name }}" min="1" max="5" value="5">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="{{ review_form.comment.id_for_label }}" class="form-label">Ваш відгук</label>
+                                <textarea class="form-control" id="{{ review_form.comment.id_for_label }}" name="{{ review_form.comment.name }}" rows="3"></textarea>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary">Надіслати відгук</button>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+    </div>
+{% endblock %}
+    
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Ініціалізація карти з центром у Києві (або іншому місті за замовчуванням)
+        const defaultPosition = [50.4501, 30.5234];
+        const map = L.map('map').setView(defaultPosition, 12);
+        
+        // Додавання шару OpenStreetMap
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+        
+        // Відображення місцезнаходження автомобіля на карті
+        const carLatitude = "{{ car.current_latitude }}";
+        const carLongitude = "{{ car.current_longitude }}";
+        
+        if (carLatitude && carLongitude) {
+            const carLat = parseFloat(carLatitude);
+            const carLng = parseFloat(carLongitude);
+            
+            if (!isNaN(carLat) && !isNaN(carLng)) {
+                // Центрування карти на автомобілі
+                map.setView([carLat, carLng], 15);
+                
+                // Додавання маркера автомобіля
+                const carMarker = L.marker([carLat, carLng], {
+                    title: "{{ car.model.brand.name }} {{ car.model.name }}"
+                }).addTo(map);
+                
+                // Додавання інформаційного вікна
+                carMarker.bindPopup(`
+                    <strong>{{ car.model.brand.name }} {{ car.model.name }}</strong><br>
+                    Держ. номер: {{ car.license_plate }}<br>
+                    Статус: 
+                    {% if car.status == 'available' %}Доступний
+                    {% elif car.status == 'busy' %}Зайнятий
+                    {% elif car.status == 'maintenance' %}На обслуговуванні
+                    {% elif car.status == 'inactive' %}Неактивний
+                    {% endif %}
+                `).openPopup();
+            }
+        }
+    });
+</script>
+{% endblock %}

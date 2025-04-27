@@ -1,0 +1,147 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if review %}Редагування відгуку{% else %}Додавання відгуку{% endif %} - MyCarShare{% endblock %}
+
+{% block extra_css %}
+<style>
+    .rating-input {
+        display: flex;
+        flex-direction: row-reverse;
+        justify-content: flex-end;
+    }
+
+    .rating-input input {
+        display: none;
+    }
+
+    .rating-input label {
+        cursor: pointer;
+        font-size: 2rem;
+        color: #ddd;
+        padding: 0 0.1em;
+    }
+
+    .rating-input label:hover,
+    .rating-input label:hover ~ label,
+    .rating-input input:checked ~ label {
+        color: #ffc107;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>{% if review %}Редагування відгуку{% else %}Додавання відгуку{% endif %}</h2>
+        <div>
+            <a href="{% url 'car-detail' car.id %}" class="btn btn-outline-secondary">Назад до автомобіля</a>
+        </div>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <h4 class="mb-0">{{ car.model.brand.name }} {{ car.model.name }}</h4>
+        </div>
+        <div class="card-body">
+            <div class="row mb-4">
+                <div class="col-md-4">
+                    {% if car.main_photo %}
+                        <img src="{{ car.main_photo.url }}" alt="{{ car.model.brand.name }} {{ car.model.name }}" class="img-fluid rounded">
+                    {% else %}
+                        <div class="bg-light text-center py-5 rounded">
+                            <span class="text-muted">Фото відсутнє</span>
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="col-md-8">
+                    <h5>Інформація про автомобіль:</h5>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <p><strong>Марка і модель:</strong> {{ car.model.brand.name }} {{ car.model.name }}</p>
+                            <p><strong>Держ. номер:</strong> {{ car.license_plate }}</p>
+                            <p><strong>Колір:</strong> {{ car.color }}</p>
+                            <p><strong>Рік:</strong> {{ car.year }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Паливо:</strong> 
+                                {% if car.fuel_type == 'petrol' %}Бензин
+                                {% elif car.fuel_type == 'diesel' %}Дизель
+                                {% elif car.fuel_type == 'electric' %}Електро
+                                {% elif car.fuel_type == 'hybrid' %}Гібрид
+                                {% endif %}
+                            </p>
+                            <p><strong>Трансмісія:</strong> 
+                                {% if car.transmission == 'manual' %}Механіка
+                                {% elif car.transmission == 'automatic' %}Автомат
+                                {% endif %}
+                            </p>
+                            <p><strong>Середній рейтинг:</strong> 
+                                <span class="text-warning">{{ car.rating|floatformat:1 }} &#9733;</span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <form method="post" novalidate>
+                {% csrf_token %}
+                
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {% for error in form.non_field_errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                
+                <input type="hidden" name="car" value="{{ car.id }}">
+                
+                <div class="mb-3">
+                    <label class="form-label">Ваша оцінка*</label>
+                    <div class="rating-input">
+                        <input type="radio" id="star5" name="rating" value="5" {% if form.initial.rating == 5 or review.rating == 5 %}checked{% endif %}>
+                        <label for="star5" title="5 зірок">&#9733;</label>
+                        
+                        <input type="radio" id="star4" name="rating" value="4" {% if form.initial.rating == 4 or review.rating == 4 %}checked{% endif %}>
+                        <label for="star4" title="4 зірки">&#9733;</label>
+                        
+                        <input type="radio" id="star3" name="rating" value="3" {% if form.initial.rating == 3 or review.rating == 3 %}checked{% endif %}>
+                        <label for="star3" title="3 зірки">&#9733;</label>
+                        
+                        <input type="radio" id="star2" name="rating" value="2" {% if form.initial.rating == 2 or review.rating == 2 %}checked{% endif %}>
+                        <label for="star2" title="2 зірки">&#9733;</label>
+                        
+                        <input type="radio" id="star1" name="rating" value="1" {% if form.initial.rating == 1 or review.rating == 1 %}checked{% endif %}>
+                        <label for="star1" title="1 зірка">&#9733;</label>
+                    </div>
+                    
+                    {% if form.rating.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.rating.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="mb-3">
+                    <label for="{{ form.comment.id_for_label }}" class="form-label">Ваш відгук*</label>
+                    {{ form.comment }}
+                    {% if form.comment.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.comment.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    <div class="form-text text-muted">Поділіться вашим досвідом використання цього автомобіля. Що сподобалося? Що можна покращити?</div>
+                </div>
+                
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary">{% if review %}Зберегти зміни{% else %}Надіслати відгук{% endif %}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

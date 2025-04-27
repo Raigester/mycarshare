@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+
+{% block title %}Моделі автомобілів - MyCarShare{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Моделі автомобілів</h2>
+        <div>
+            <a href="{% url 'car-list' %}" class="btn btn-outline-secondary me-2">Назад до автомобілів</a>
+            {% if user.is_staff %}
+            <a href="{% url 'car-model-create' %}" class="btn btn-primary">Додати модель</a>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h4 class="mb-0">Фільтр моделей</h4>
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Марка</label>
+                    <select name="brand" class="form-select">
+                        <option value="">Усі марки</option>
+                        {% for brand in brands %}
+                            <option value="{{ brand.id }}" {% if selected_brand == brand.id|stringformat:"s" %}selected{% endif %}>{{ brand.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary">Застосувати</button>
+                    <a href="{% url 'car-model-list' %}" class="btn btn-outline-secondary">Скинути</a>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    {% if models %}
+        <div class="row">
+            {% for model in models %}
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h5 class="mb-0">{{ model.brand.name }}</h5>
+                        </div>
+                        <div class="card-body">
+                            <h3 class="card-title">{{ model.name }}</h3>
+                            <p class="card-text">Кількість автомобілів: {{ model.cars.count }}</p>
+                        </div>
+                        <div class="card-footer">
+                            <div class="d-grid gap-2">
+                                <a href="{% url 'car-model-detail' model.id %}" class="btn btn-outline-primary">Детальніше</a>
+                                {% if user.is_staff %}
+                                <div class="btn-group">
+                                    <a href="{% url 'car-model-update' model.id %}" class="btn btn-outline-secondary">Змінити</a>
+                                    <a href="{% url 'car-model-delete' model.id %}" class="btn btn-outline-danger">Видалити</a>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+        
+        {% if is_paginated %}
+            <nav aria-label="Page navigation" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{% if selected_brand %}&brand={{ selected_brand }}{% endif %}">&laquo; Перша</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if selected_brand %}&brand={{ selected_brand }}{% endif %}">Попередня</a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">&laquo; Перша</span>
+                        </li>
+                        <li class="page-item disabled">
+                            <span class="page-link">Попередня</span>
+                        </li>
+                    {% endif %}
+                    
+                    {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ num }}</span>
+                            </li>
+                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ num }}{% if selected_brand %}&brand={{ selected_brand }}{% endif %}">{{ num }}</a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if selected_brand %}&brand={{ selected_brand }}{% endif %}">Наступна</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if selected_brand %}&brand={{ selected_brand }}{% endif %}">Остання &raquo;</a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">Наступна</span>
+                        </li>
+                        <li class="page-item disabled">
+                            <span class="page-link">Остання &raquo;</span>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        {% endif %}
+    {% else %}
+        <div class="alert alert-info">
+            Моделі автомобілів не знайдені.
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
