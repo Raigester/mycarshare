@@ -3,7 +3,7 @@ from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 
 class CarBrand(models.Model):
-    """Model for car brands"""
+    """Модель для брендів автомобілів"""
     
     name = models.CharField(max_length=100, unique=True)
     logo = models.ImageField(upload_to='brand_logos/', null=True, blank=True)
@@ -12,7 +12,7 @@ class CarBrand(models.Model):
         return self.name
 
 class CarModel(models.Model):
-    """Model for car models"""
+    """Модель для моделей автомобілів"""
     
     brand = models.ForeignKey(CarBrand, on_delete=models.CASCADE, related_name='models')
     name = models.CharField(max_length=100)
@@ -24,7 +24,7 @@ class CarModel(models.Model):
         return f"{self.brand.name} {self.name}"
 
 class Car(models.Model):
-    """Model for cars"""
+    """Модель для автомобілів"""
     
     STATUS_CHOICES = [
         ('available', 'Доступний'),
@@ -49,37 +49,37 @@ class Car(models.Model):
     year = models.PositiveIntegerField()
     license_plate = models.CharField(max_length=20, unique=True)
     color = models.CharField(max_length=50)
-    mileage = models.PositiveIntegerField(help_text="Mileage in kilometers")
+    mileage = models.PositiveIntegerField(help_text="Пробіг у кілометрах")
     fuel_type = models.CharField(max_length=20, choices=FUEL_CHOICES)
     transmission = models.CharField(max_length=20, choices=TRANSMISSION_CHOICES)
     
-    # Rental characteristics
+    # Характеристики оренди
     price_per_minute = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
     
-    # Technical specifications
-    engine_capacity = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)  # in liters
-    power = models.PositiveIntegerField(null=True, blank=True)  # in horsepower
+    # Технічні характеристики
+    engine_capacity = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)  # у літрах
+    power = models.PositiveIntegerField(null=True, blank=True)  # у кінських силах
     seats = models.PositiveSmallIntegerField(validators=[MinValueValidator(1), MaxValueValidator(10)])
     
-    # Additional options
+    # Додаткові опції
     has_air_conditioning = models.BooleanField(default=True)
     has_gps = models.BooleanField(default=False)
     has_child_seat = models.BooleanField(default=False)
     has_bluetooth = models.BooleanField(default=False)
     has_usb = models.BooleanField(default=True)
     
-    # Status and location
+    # Статус і місцезнаходження
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='available')
     current_latitude = models.CharField(max_length=255, blank=True)
     current_longitude = models.CharField(max_length=255, blank=True)
     
-    # Media
+    # Медіа
     main_photo = models.ImageField(upload_to='car_photos/')
     
-    # Rating
+    # Рейтинг
     rating = models.DecimalField(max_digits=3, decimal_places=2, default=0.0)
     
-    # Service information
+    # Інформація про обслуговування
     insurance_valid_until = models.DateField()
     technical_inspection_valid_until = models.DateField()
     created_at = models.DateTimeField(auto_now_add=True)
@@ -89,17 +89,17 @@ class Car(models.Model):
         return f"{self.model} ({self.license_plate})"
 
 class CarPhoto(models.Model):
-    """Model for additional car photos"""
+    """Модель для додаткових фотографій автомобілів"""
     
     car = models.ForeignKey(Car, on_delete=models.CASCADE, related_name='photos')
     photo = models.ImageField(upload_to='car_photos/')
     caption = models.CharField(max_length=200, blank=True)
     
     def __str__(self):
-        return f"Photo {self.id} for {self.car}"
+        return f"Фото {self.id} для {self.car}"
 
 class CarReview(models.Model):
-    """Model for car reviews"""
+    """Модель для відгуків про автомобілі"""
     
     car = models.ForeignKey(Car, on_delete=models.CASCADE, related_name='reviews')
     user = models.ForeignKey('users.User', on_delete=models.CASCADE)
@@ -111,4 +111,4 @@ class CarReview(models.Model):
         unique_together = ('car', 'user')
     
     def __str__(self):
-        return f"Review by {self.user.username} for {self.car}"
+        return f"Відгук від {self.user.username} для {self.car}"
