@@ -538,13 +538,37 @@ class AvailableCarsView(ListView):
     template_name = 'available_cars.html'
     context_object_name = 'cars'
     paginate_by = 12
-    
+
     def get_queryset(self):
-        return Car.objects.filter(status='available')
-    
+        queryset = Car.objects.all()
+        self.filter_form = CarFilterForm(self.request.GET)
+        if self.filter_form.is_valid():
+            if self.filter_form.cleaned_data.get('brand'):
+                queryset = queryset.filter(model__brand=self.filter_form.cleaned_data['brand'])
+            if self.filter_form.cleaned_data.get('model'):
+                queryset = queryset.filter(model=self.filter_form.cleaned_data['model'])
+            if self.filter_form.cleaned_data.get('fuel_type'):
+                queryset = queryset.filter(fuel_type=self.filter_form.cleaned_data['fuel_type'])
+            if self.filter_form.cleaned_data.get('transmission'):
+                queryset = queryset.filter(transmission=self.filter_form.cleaned_data['transmission'])
+            if self.filter_form.cleaned_data.get('min_year'):
+                queryset = queryset.filter(year__gte=self.filter_form.cleaned_data['min_year'])
+            if self.filter_form.cleaned_data.get('max_year'):
+                queryset = queryset.filter(year__lte=self.filter_form.cleaned_data['max_year'])
+            if self.filter_form.cleaned_data.get('min_seats'):
+                queryset = queryset.filter(seats__gte=self.filter_form.cleaned_data['min_seats'])
+            if self.filter_form.cleaned_data.get('has_air_conditioning'):
+                queryset = queryset.filter(has_air_conditioning=True)
+            if self.filter_form.cleaned_data.get('has_gps'):
+                queryset = queryset.filter(has_gps=True)
+            if self.filter_form.cleaned_data.get('has_child_seat'):
+                queryset = queryset.filter(has_child_seat=True)
+        
+        return queryset.filter(status='available')
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['filter_form'] = CarFilterForm(self.request.GET)
+        context['filter_form'] = self.filter_form
         return context
 
 # Представлення для відображення карти з автомобілями
