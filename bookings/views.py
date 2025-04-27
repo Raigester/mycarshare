@@ -50,7 +50,7 @@ def start_rental(request):
             return redirect('booking-detail', pk=booking.id)
     else:
         form = BookingStartRentalForm(user=request.user)
-    return render(request, 'bookings/start_rental.html', {'form': form})
+    return render(request, 'start_rental.html', {'form': form})
 
 @login_required
 def end_rental(request, pk):
@@ -119,14 +119,14 @@ def end_rental(request, pk):
             return redirect('booking-list')
     else:
         form = BookingEndRentalForm()
-    return render(request, 'bookings/end_rental.html', {
+    return render(request, 'end_rental.html', {
         'booking': booking,
         'form': form
     })
 
 class ActiveBookingsView(LoginRequiredMixin, ListView):
     model = Booking
-    template_name = 'bookings/active_bookings.html'
+    template_name = 'active_bookings.html'
     context_object_name = 'bookings'
     def get_queryset(self):
         now = timezone.now()
@@ -139,7 +139,7 @@ class ActiveBookingsView(LoginRequiredMixin, ListView):
 
 class CompletedBookingsView(LoginRequiredMixin, ListView):
     model = Booking
-    template_name = 'bookings/completed_bookings.html'
+    template_name = 'completed_bookings.html'
     context_object_name = 'bookings'
     def get_queryset(self):
         return Booking.objects.filter(
@@ -153,7 +153,7 @@ class BookingDetailView(LoginRequiredMixin, View):
         if not request.user.is_staff and booking.user != request.user:
             return HttpResponseForbidden("У вас немає доступу до цього бронювання.")
         history = BookingHistory.objects.filter(booking=booking).order_by('-timestamp')
-        return render(request, 'bookings/booking_detail.html', {
+        return render(request, 'booking_detail.html', {
             'booking': booking,
             'history': history
         })
