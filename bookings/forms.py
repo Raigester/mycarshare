@@ -44,7 +44,7 @@ class BookingStartRentalForm(forms.Form):
                 if balance.amount < min_required:
                     raise ValidationError(f"Недостатньо коштів на балансі. Мінімальний необхідний баланс: {min_required} ₴")
             except:
-                raise ValidationError("У користувача відсутній баланс")
+                raise ValidationError("Немає коштів на балансі")
         
         return cleaned_data
 
