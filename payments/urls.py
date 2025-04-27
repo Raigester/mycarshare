@@ -2,7 +2,7 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    # Payment views
+    # Відображення платежів
     path('', views.PaymentListView.as_view(), name='payment-list'),
     path('<int:pk>/', views.PaymentDetailView.as_view(), name='payment-detail'),
     path('<int:pk>/cancel/', views.CancelPaymentActionView.as_view(), name='payment-cancel-action'),
@@ -11,9 +11,9 @@ urlpatterns = [
     path('success/', views.PaymentSuccessView.as_view(), name='payment-success'),
     path('cancel/', views.PaymentCancelView.as_view(), name='payment-cancel'),
     
-    # Transaction views
+    # Відображення транзакцій
     path('transactions/', views.TransactionListView.as_view(), name='transaction-list'),
     
-    # Webhook callback
+    # Вебхук для зворотного виклику
     path('webhook/liqpay/', views.LiqPayCallbackView.as_view(), name='liqpay-callback'),
 ]

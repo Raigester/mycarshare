@@ -4,7 +4,7 @@ from django.conf import settings
 from decimal import Decimal
 
 class PaymentSerializer(serializers.ModelSerializer):
-    """Serializer for the Payment model"""
+    """Серіалізатор для моделі Payment"""
     
     class Meta:
         model = Payment
@@ -12,7 +12,7 @@ class PaymentSerializer(serializers.ModelSerializer):
         read_only_fields = ('user', 'status', 'created_at')
 
 class LiqPayPaymentSerializer(serializers.ModelSerializer):
-    """Serializer for LiqPay payments"""
+    """Серіалізатор для платежів через LiqPay"""
     
     class Meta:
         model = LiqPayPayment  
@@ -20,7 +20,7 @@ class LiqPayPaymentSerializer(serializers.ModelSerializer):
         read_only_fields = ('liqpay_order_id', 'liqpay_signature', 'liqpay_data')
 
 class PaymentTransactionSerializer(serializers.ModelSerializer):
-    """Serializer for payment transactions"""
+    """Серіалізатор для транзакцій платежів"""
     
     class Meta:
         model = PaymentTransaction
@@ -29,24 +29,24 @@ class PaymentTransactionSerializer(serializers.ModelSerializer):
         read_only_fields = ('user', 'payment', 'balance_after', 'created_at')
 
 class CreatePaymentSerializer(serializers.Serializer):
-    """Serializer for creating a payment"""
+    """Серіалізатор для створення платежу"""
     
     amount = serializers.DecimalField(max_digits=10, decimal_places=2)
     payment_provider = serializers.ChoiceField(choices=Payment.PAYMENT_PROVIDER_CHOICES)
     
     def validate_amount(self, value):
-        """Validate payment amount"""
+        """Валідація суми платежу"""
         min_payment = Decimal(settings.MIN_PAYMENT_AMOUNT)
         max_payment = Decimal(settings.MAX_PAYMENT_AMOUNT)
         
         if value < min_payment:
             raise serializers.ValidationError(
-                f"Amount must be at least {min_payment}"
+                f"Сума має бути не меншою за {min_payment}"
             )
         
         if value > max_payment:
             raise serializers.ValidationError(
-                f"Amount cannot exceed {max_payment}"
+                f"Сума не може перевищувати {max_payment}"
             )
         
         return value
