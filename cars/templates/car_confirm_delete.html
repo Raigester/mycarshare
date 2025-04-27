@@ -1,66 +1,35 @@
 {% extends 'base.html' %}
 
-{% block title %}Видалення фотографії автомобіля - MyCarShare{% endblock %}
+{% block title %}Видалення автомобіля - MyCarShare{% endblock %}
 
 {% block content %}
 <div class="form-container">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>Видалення фотографії</h2>
+        <h2>Видалення автомобіля</h2>
         <div>
-            {% if photo.car %}
-                <a href="{% url 'car-detail' photo.car.id %}" class="btn btn-outline-secondary">Назад до автомобіля</a>
-            {% else %}
-                <a href="{% url 'car-photo-list' %}" class="btn btn-outline-secondary">Назад до фотографій</a>
-            {% endif %}
+            <a href="{% url 'car-detail' car.id %}" class="btn btn-outline-secondary">Назад до автомобіля</a>
         </div>
     </div>
-    
+
     <div class="card">
         <div class="card-header bg-danger text-white">
             <h4 class="mb-0">Підтвердження видалення</h4>
         </div>
         <div class="card-body">
-            <div class="row mb-4">
-                <div class="col-md-6">
-                    <div class="card mb-3">
-                        <div class="card-header bg-light">
-                            <h5 class="mb-0">Інформація про фотографію</h5>
-                        </div>
-                        <div class="card-body">
-                            {% if photo.car %}
-                                <p><strong>Автомобіль:</strong> {{ photo.car.model.brand.name }} {{ photo.car.model.name }}</p>
-                                <p><strong>Держ. номер:</strong> {{ photo.car.license_plate }}</p>
-                            {% else %}
-                                <p class="text-warning">Автомобіль не знайдено або був видалений</p>
-                            {% endif %}
-                            {% if photo.caption %}
-                                <p><strong>Підпис:</strong> {{ photo.caption }}</p>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <img src="{{ photo.photo.url }}" alt="{{ photo.caption|default:'Фото автомобіля' }}" class="img-fluid rounded">
-                </div>
-            </div>
-            
+
             <div class="alert alert-warning">
-                <p><strong>Увага!</strong> Ви збираєтесь видалити фотографію 
-                {% if photo.car %}автомобіля {{ photo.car.model.brand.name }} {{ photo.car.model.name }}{% else %}автомобіля{% endif %}.</p>
+                <p><strong>Увага!</strong> Ви збираєтесь видалити автомобіль <strong>{{ car.model.brand.name }} {{ car.model.name }}</strong> з номерним знаком <strong>{{ car.license_plate }}</strong>.</p>
                 <p>Цю дію <strong>неможливо скасувати</strong>.</p>
             </div>
-            
+
             <form method="post">
                 {% csrf_token %}
                 <div class="d-flex justify-content-between">
-                    {% if photo.car %}
-                        <a href="{% url 'car-detail' photo.car.id %}" class="btn btn-outline-secondary">Скасувати</a>
-                    {% else %}
-                        <a href="{% url 'car-photo-list' %}" class="btn btn-outline-secondary">Скасувати</a>
-                    {% endif %}
+                    <a href="{% url 'car-detail' car.id %}" class="btn btn-outline-secondary">Скасувати</a>
                     <button type="submit" class="btn btn-danger">Підтвердити видалення</button>
                 </div>
             </form>
+
         </div>
     </div>
 </div>
