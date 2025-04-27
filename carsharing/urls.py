@@ -13,6 +13,6 @@ urlpatterns = [
     path("payments/", include("payments.urls")),
 ]
 
-# Serving media files in development mode
+# Обробка медіафайлів у режимі розробки
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
