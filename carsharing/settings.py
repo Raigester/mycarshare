@@ -1,5 +1,4 @@
 import os
-from datetime import timedelta
 from pathlib import Path
 
 from decouple import Csv, config
@@ -28,8 +27,6 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
 
     # Сторонні додатки
-    "rest_framework",  # Django REST Framework для створення API
-    "corsheaders",  # Додаток для налаштування CORS
     "django_filters",  # Додаток для фільтрації даних у запитах
 
     # Додатки проєкту
@@ -44,7 +41,6 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",  # Забезпечення безпеки
     "django.contrib.sessions.middleware.SessionMiddleware",  # Управління сесіями
-    "corsheaders.middleware.CorsMiddleware",  # Дозволяє налаштувати CORS
     "django.middleware.common.CommonMiddleware",  # Загальні налаштування
     "django.middleware.csrf.CsrfViewMiddleware",  # Захист від CSRF атак
     "django.contrib.auth.middleware.AuthenticationMiddleware",  # Аутентифікація користувачів
@@ -145,34 +141,6 @@ LOGIN_REDIRECT_URL = "/accounts/profile/"
 
 # URL для виходу
 LOGOUT_REDIRECT_URL = "/accounts/login/"
-
-# Налаштування REST Framework
-REST_FRAMEWORK = {
-    "DEFAULT_AUTHENTICATION_CLASSES": (
-        "rest_framework_simplejwt.authentication.JWTAuthentication",  # Аутентифікація через JWT
-    ),
-    "DEFAULT_PERMISSION_CLASSES": [
-        "rest_framework.permissions.IsAuthenticated",  # Доступ лише для аутентифікованих користувачів
-    ],
-    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",  # Пагінація для API
-    "PAGE_SIZE": 10,  # Кількість елементів на сторінку
-}
-
-# Налаштування JWT
-SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=5),  # Термін дії токена доступу
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),  # Термін дії токена оновлення
-    "ROTATE_REFRESH_TOKENS": False,  # Чи оновлювати токен оновлення після використання
-    "BLACKLIST_AFTER_ROTATION": True,  # Додавати старі токени до чорного списку після ротації
-    "ALGORITHM": "HS256",  # Алгоритм підпису токенів
-    "SIGNING_KEY": config("SIGNING_KEY"),  # Ключ для підпису токенів
-    "VERIFYING_KEY": None,  # Ключ для перевірки токенів
-    "AUTH_HEADER_TYPES": ("Bearer",),  # Тип заголовка для передачі токена
-    "USER_ID_FIELD": "id",  # Поле для ідентифікації користувача
-    "USER_ID_CLAIM": "user_id",  # Поле в токені для збереження ID користувача
-    "AUTH_TOKEN_CLASSES": ("rest_framework_simplejwt.tokens.AccessToken",),  # Клас токена доступу
-    "TOKEN_TYPE_CLAIM": "token_type",  # Тип токена
-}
 
 # Налаштування CORS
 CORS_ALLOW_ALL_ORIGINS = True  # Дозволити всі джерела (тільки для розробки!)

@@ -1,15 +1,10 @@
-from django.urls import include, path
-from rest_framework.routers import DefaultRouter
+from django.urls import path
 
 from . import views
 
 
-# Роутер для сумісності з існуючим API
-router = DefaultRouter()
-
 urlpatterns = [
     # API для сумісності з JS (для роботи карт тощо)
-    path("api/", include(router.urls)),
     path("api/cars/<int:pk>/", views.get_car_api, name="car-api-detail"),
 
     # Представлення для брендів автомобілів
