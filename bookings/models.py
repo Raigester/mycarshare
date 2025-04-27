@@ -4,7 +4,7 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 
 class Booking(models.Model):
-    """Model for car bookings"""
+    """Модель для бронювання автомобілів"""
     
     STATUS_CHOICES = [
         ('pending', 'Очікує підтвердження'),
@@ -14,46 +14,47 @@ class Booking(models.Model):
         ('cancelled', 'Скасовано')
     ]
     
+    
     user = models.ForeignKey('users.User', on_delete=models.CASCADE, related_name='bookings')
     car = models.ForeignKey('cars.Car', on_delete=models.CASCADE, related_name='bookings')
     
-    # Booking time
+    # Час бронювання
     start_time = models.DateTimeField()
     end_time = models.DateTimeField(null=True, blank=True)
     
-    # Locations
+    # Локації
     pickup_location = models.CharField(max_length=255, blank=True)
     return_location = models.CharField(max_length=255, blank=True)
     
-    # Status and information
+    # Статус та інформація
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     total_price = models.DecimalField(max_digits=10, decimal_places=2)
     
-    # System information
+    # Системна інформація
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
-    # Billing information
+    # Інформація про оплату
     last_billing_time = models.DateTimeField(null=True, blank=True)
     minutes_billed = models.PositiveIntegerField(default=0)
     def __str__(self):
         return f"Booking {self.id} - {self.car} ({self.status})"
     
     def clean(self):
-        """Model validation"""
+        """Валідація моделі"""
         
-        # Check that start time is earlier than end time
+        # Перевірка, що час початку раніше за час завершення
         if self.end_time:
             if self.start_time >= self.end_time:
-                raise ValidationError("Start time must be earlier than end time")
+                raise ValidationError("Час початку має бути раніше за час завершення")
         
-        # Check only when creating a new booking (if there is no primary key)
-        # Make sure that the rental start time is in the future (with a tolerance of 2 seconds)
+        # Перевірка лише при створенні нового бронювання (якщо немає первинного ключа)
+        # Переконайтеся, що час початку оренди знаходиться в майбутньому (з допуском у 2 секунди)
         if self.pk is None:
             if self.start_time and self.start_time <= timezone.now() - datetime.timedelta(seconds=2):
-                raise ValidationError("Start time must be in the future")
+                raise ValidationError("Час початку має бути в майбутньому")
         
-        # Check for overlapping bookings in the same period
+        # Перевірка на перетин бронювань у той самий період
         if self.end_time:
             overlapping_bookings = Booking.objects.exclude(id=self.id).filter(
                 car=self.car,
@@ -63,13 +64,13 @@ class Booking(models.Model):
             )
             
             if overlapping_bookings.exists():
-                raise ValidationError("The car is already booked for this period")
+                raise ValidationError("Автомобіль вже заброньовано на цей період")
 
     def save(self, *args, **kwargs):
-        # Perform validation before saving
+        # Виконати валідацію перед збереженням
         self.clean()
         
-        # If this is a new booking and the status is confirmed, update the car's status
+        # Якщо це нове бронювання і статус підтверджений, оновити статус автомобіля
         if not self.id and self.status in ['confirmed', 'active']:
             self.car.status = 'busy'
             self.car.save()
@@ -77,7 +78,7 @@ class Booking(models.Model):
         super().save(*args, **kwargs)
 
 class BookingHistory(models.Model):
-    """Model for booking history (to track changes)"""
+    """Модель для історії бронювань (для відстеження змін)"""
     
     booking = models.ForeignKey(Booking, on_delete=models.CASCADE, related_name='history')
     status = models.CharField(max_length=20, choices=Booking.STATUS_CHOICES)

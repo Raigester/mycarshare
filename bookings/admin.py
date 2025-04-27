@@ -4,75 +4,75 @@ from .models import Booking, BookingHistory
 class BookingHistoryInline(admin.TabularInline):
     model = BookingHistory
     extra = 0
-    readonly_fields = ('timestamp',)
+    readonly_fields = ('timestamp',)  # Поля лише для читання
 
 class BookingAdmin(admin.ModelAdmin):
-    list_display = ('id', 'user', 'car', 'start_time', 'end_time', 'status', 'total_price')
-    list_filter = ('status', 'start_time', 'end_time')
-    search_fields = ('user__username', 'user__email', 'car__license_plate')
-    readonly_fields = ('created_at', 'updated_at')
-    inlines = [BookingHistoryInline]
-    actions = ['mark_as_confirmed', 'mark_as_active', 'mark_as_completed', 'mark_as_cancelled']
+    list_display = ('id', 'user', 'car', 'start_time', 'end_time', 'status', 'total_price')  # Поля для відображення у списку
+    list_filter = ('status', 'start_time', 'end_time')  # Фільтри для списку
+    search_fields = ('user__username', 'user__email', 'car__license_plate')  # Поля для пошуку
+    readonly_fields = ('created_at', 'updated_at')  # Поля лише для читання
+    inlines = [BookingHistoryInline]  # Вбудовані моделі
+    actions = ['mark_as_confirmed', 'mark_as_active', 'mark_as_completed', 'mark_as_cancelled']  # Дії для вибраних записів
     
     def mark_as_confirmed(self, request, queryset):
         for booking in queryset:
-            booking.status = 'confirmed'
+            booking.status = 'confirmed'  # Змінити статус на "підтверджено"
             booking.save()
             BookingHistory.objects.create(
                 booking=booking,
                 status='confirmed',
-                notes="Status changed to 'Confirmed' via admin panel"
+                notes="Статус змінено на 'Підтверджено' через панель адміністратора"
             )
-        self.message_user(request, f"Selected bookings have been marked as confirmed")
-    mark_as_confirmed.short_description = "Mark as confirmed"
+        self.message_user(request, f"Вибрані бронювання були позначені як підтверджені")
+    mark_as_confirmed.short_description = "Позначити як підтверджені"
     
     def mark_as_active(self, request, queryset):
         for booking in queryset:
-            booking.status = 'active'
+            booking.status = 'active'  # Змінити статус на "активно"
             booking.save()
-            booking.car.status = 'busy'
+            booking.car.status = 'busy'  # Змінити статус автомобіля на "зайнятий"
             booking.car.save()
             BookingHistory.objects.create(
                 booking=booking,
                 status='active',
-                notes="Status changed to 'Active' via admin panel"
+                notes="Статус змінено на 'Активно' через панель адміністратора"
             )
-        self.message_user(request, f"Selected bookings have been marked as active")
-    mark_as_active.short_description = "Mark as active"
+        self.message_user(request, f"Вибрані бронювання були позначені як активні")
+    mark_as_active.short_description = "Позначити як активні"
     
     def mark_as_completed(self, request, queryset):
         for booking in queryset:
-            booking.status = 'completed'
+            booking.status = 'completed'  # Змінити статус на "завершено"
             booking.save()
-            booking.car.status = 'available'
+            booking.car.status = 'available'  # Змінити статус автомобіля на "доступний"
             booking.car.save()
             BookingHistory.objects.create(
                 booking=booking,
                 status='completed',
-                notes="Status changed to 'Completed' via admin panel"
+                notes="Статус змінено на 'Завершено' через панель адміністратора"
             )
-        self.message_user(request, f"Selected bookings have been marked as completed")
-    mark_as_completed.short_description = "Mark as completed"
+        self.message_user(request, f"Вибрані бронювання були позначені як завершені")
+    mark_as_completed.short_description = "Позначити як завершені"
     
     def mark_as_cancelled(self, request, queryset):
         for booking in queryset:
-            booking.status = 'cancelled'
+            booking.status = 'cancelled'  # Змінити статус на "скасовано"
             booking.save()
-            booking.car.status = 'available'
+            booking.car.status = 'available'  # Змінити статус автомобіля на "доступний"
             booking.car.save()
             BookingHistory.objects.create(
                 booking=booking,
                 status='cancelled',
-                notes="Status changed to 'Cancelled' via admin panel"
+                notes="Статус змінено на 'Скасовано' через панель адміністратора"
             )
-        self.message_user(request, f"Selected bookings have been marked as cancelled")
-    mark_as_cancelled.short_description = "Mark as cancelled"
+        self.message_user(request, f"Вибрані бронювання були позначені як скасовані")
+    mark_as_cancelled.short_description = "Позначити як скасовані"
 
 class BookingHistoryAdmin(admin.ModelAdmin):
-    list_display = ('booking', 'status', 'timestamp')
-    list_filter = ('status', 'timestamp')
-    search_fields = ('booking__user__username', 'booking__car__license_plate', 'notes')
-    readonly_fields = ('timestamp',)
+    list_display = ('booking', 'status', 'timestamp')  # Поля для відображення у списку
+    list_filter = ('status', 'timestamp')  # Фільтри для списку
+    search_fields = ('booking__user__username', 'booking__car__license_plate', 'notes')  # Поля для пошуку
+    readonly_fields = ('timestamp',)  # Поля лише для читання
 
-admin.site.register(Booking, BookingAdmin)
-admin.site.register(BookingHistory, BookingHistoryAdmin)
+admin.site.register(Booking, BookingAdmin)  # Реєстрація моделі Booking у панелі адміністратора
+admin.site.register(BookingHistory, BookingHistoryAdmin)  # Реєстрація моделі BookingHistory у панелі адміністратора
