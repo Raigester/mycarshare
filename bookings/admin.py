@@ -68,11 +68,5 @@ class BookingAdmin(admin.ModelAdmin):
         self.message_user(request, f"Вибрані бронювання були позначені як скасовані")
     mark_as_cancelled.short_description = "Позначити як скасовані"
 
-class BookingHistoryAdmin(admin.ModelAdmin):
-    list_display = ('booking', 'status', 'timestamp')  # Поля для відображення у списку
-    list_filter = ('status', 'timestamp')  # Фільтри для списку
-    search_fields = ('booking__user__username', 'booking__car__license_plate', 'notes')  # Поля для пошуку
-    readonly_fields = ('timestamp',)  # Поля лише для читання
 
 admin.site.register(Booking, BookingAdmin)  # Реєстрація моделі Booking у панелі адміністратора
-admin.site.register(BookingHistory, BookingHistoryAdmin)  # Реєстрація моделі BookingHistory у панелі адміністратора
