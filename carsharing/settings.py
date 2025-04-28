@@ -40,6 +40,7 @@ INSTALLED_APPS = [
 # Налаштування проміжного програмного забезпечення (middleware)
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",  # Забезпечення безпеки
+    "carsharing.ratelimit_middleware.GlobalRateLimitMiddleware",  # Додано обмеження швидкості
     "django.contrib.sessions.middleware.SessionMiddleware",  # Управління сесіями
     "django.middleware.common.CommonMiddleware",  # Загальні налаштування
     "django.middleware.csrf.CsrfViewMiddleware",  # Захист від CSRF атак
@@ -144,9 +145,22 @@ CELERY_TASK_SERIALIZER = "json"  # Серіалізація завдань у ф
 CELERY_RESULT_SERIALIZER = "json"  # Серіалізація результатів у формат JSON
 CELERY_TIMEZONE = "Europe/Kyiv"  # Часовий пояс для завдань
 
+# Налаштування кешу для обмеження частоти запитів
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache", # Використання Redis як кешу
+        "LOCATION": f"redis://{config('REDIS_HOST')}:{config('REDIS_PORT')}/{config('REDIS_DB')}", # URL Redis
+    }
+}
+
+# Налаштування для django-ratelimit
+RATELIMIT_USE_CACHE = "default" ## Використання кешу для зберігання даних про обмеження запитів
+RATELIMIT_ENABLE = True # Увімкнення обмеження запитів
+RATELIMIT_FAIL_OPEN = False  # Встановлення поведінки при збої у перевірці ліміту: якщо False — запит буде відхилено
+
 # Налаштування LiqPay
-LIQPAY_PUBLIC_KEY = config("LIQPAY_PUBLIC_KEY")
-LIQPAY_PRIVATE_KEY = config("LIQPAY_PRIVATE_KEY")
+LIQPAY_PUBLIC_KEY = config("LIQPAY_PUBLIC_KEY") # Публічний ключ LiqPay
+LIQPAY_PRIVATE_KEY = config("LIQPAY_PRIVATE_KEY") # Приватний ключ LiqPay
 
 # Налаштування платежів
 MIN_PAYMENT_AMOUNT = "10.00"  # Мінімальна сума депозиту
