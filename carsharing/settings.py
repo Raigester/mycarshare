@@ -55,7 +55,7 @@ ROOT_URLCONF = "carsharing.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",  # Використання шаблонів Django
-        "DIRS": [],  # Додаткові директорії для шаблонів (порожній список за замовчуванням)
+        "DIRS": [BASE_DIR / "templates"],  # Додаткові директорії для шаблонів (порожній список за замовчуванням)
         "APP_DIRS": True,  # Увімкнення автоматичного пошуку шаблонів у додатках
         "OPTIONS": {
             "context_processors": [  # Контекстні процесори для шаблонів
@@ -71,30 +71,25 @@ TEMPLATES = [
 # Налаштування WSGI-додатка для запуску проєкту
 WSGI_APPLICATION = "carsharing.wsgi.application"
 
-# Налаштування бази даних
+
+# База даних
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",  # Використання SQLite як бази даних за замовчуванням
-        "NAME": BASE_DIR / "db.sqlite3",  # Шлях до файлу бази даних
+        "ENGINE": "django.db.backends.postgresql",  # Використання PostgreSQL як бази даних
+        "NAME": config("DB_NAME"),  # Назва бази даних
+        "USER": config("DB_USER"),  # Ім'я користувача бази даних
+        "PASSWORD": config("DB_PASSWORD"),  # Пароль користувача бази даних
+        "HOST": config("DB_HOST"),  # Хост бази даних
+        "PORT": config("DB_PORT"),  # Порт бази даних
     }
 }
-
-# # Для продакшн середовища рекомендується використовувати PostgreSQL
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql',  # Використання PostgreSQL як бази даних
-#         'NAME': config('DB_NAME'),  # Назва бази даних
-#         'USER': config('DB_USER'),  # Ім'я користувача бази даних
-#         'PASSWORD': config('DB_PASSWORD'),  # Пароль користувача бази даних
-#         'HOST': config('DB_HOST'),  # Хост бази даних
-#         'PORT': config('DB_PORT'),  # Порт бази даних
-#     }
-# }
 
 # Валідація паролів
 AUTH_PASSWORD_VALIDATORS = [
     {
-        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
+        "NAME": (
+            "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"
+        ),  # Перевірка схожості пароля з атрибутами користувача такими як персональні дані
     },
     {
         "NAME": (
