@@ -152,7 +152,7 @@ EMAIL_PORT = 1025 # Порт для SMTP-сервера
 EMAIL_USE_TLS = False # Використання TLS для безпеки
 EMAIL_HOST_USER = "" # Ім'я користувача для SMTP-сервера
 EMAIL_HOST_PASSWORD = "" # Пароль для SMTP-сервера
-BASE_URL = "http://localhost:8000" # Базовий URL для електронних листів
+BASE_URL = "http://localhost" # Базовий URL для електронних листів
 
 # Налаштування кешу для обмеження частоти запитів
 CACHES = {
