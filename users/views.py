@@ -5,7 +5,9 @@ from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.views import LoginView
 from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
+from django.utils.decorators import method_decorator
 from django.views.generic import CreateView, ListView, UpdateView
+from django_ratelimit.decorators import ratelimit
 
 from .forms import (
     AdminVerificationForm,
@@ -38,6 +40,8 @@ class UserRegistrationView(CreateView):
         messages.success(self.request, "Акаунт успішно створено! Тепер ви можете увійти.")
         return super().form_valid(form)
 
+# Захист від брутфорсу обмеження кількості запитів до 3 разів на 5 хвилин
+@method_decorator(ratelimit(key="ip", rate="3/5m", method="POST", block=True), name="dispatch")
 class CustomLoginView(LoginView):
     """Представлення для входу користувача"""
     template_name = "login.html"
