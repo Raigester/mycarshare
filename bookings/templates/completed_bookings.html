@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+
+{% block title %}Завершені бронювання{% endblock %}
+
+{% block content %}
+    <h1>Завершені бронювання</h1>
+    {% if bookings %}
+        <ul>
+        {% for booking in bookings %}
+            <li>Бронювання №{{ booking.id }} - Статус: {{ booking.status }}</li>
+        {% endfor %}
+        </ul>
+    {% else %}
+        <p>У вас немає завершених бронювань.</p>
+    {% endif %}
+{% endblock %}

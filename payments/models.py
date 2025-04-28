@@ -47,7 +47,6 @@ class PaymentTransaction(models.Model):
     TRANSACTION_TYPE_CHOICES = (
         ("deposit", _("Поповнення")),
         ("withdrawal", _("Виведення")),
-        ("booking", _("Плата за бронювання")),
     )
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="transactions")  # Зв'язок з користувачем
