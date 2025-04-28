@@ -5,14 +5,22 @@
 
 from .settings import *
 
-
+# Використовуємо SQLite для тестів бо вона швидше
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",  # Для тестів використовувати SQLite (швидше)
-        "NAME": ":memory:",
+        "NAME": ":memory:", # Використовуємо базу даних в пам'яті
     }
 }
 
+# Використовуємо MD5 для хешування паролів у тестах це швидше, але менш безпечно 
 PASSWORD_HASHERS = [
     "django.contrib.auth.hashers.MD5PasswordHasher", # Використовуємо MD5 для швидкого хешування паролів у тестах
 ]
+
+# Вимкнення кешування для тестів
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.dummy.DummyCache", # Використовуємо DummyCache для тестів
+    }
+}
