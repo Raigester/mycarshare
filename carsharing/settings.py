@@ -71,7 +71,6 @@ TEMPLATES = [
 # Налаштування WSGI-додатка для запуску проєкту
 WSGI_APPLICATION = "carsharing.wsgi.application"
 
-
 # База даних
 DATABASES = {
     "default": {
