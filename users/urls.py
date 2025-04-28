@@ -10,6 +10,10 @@ urlpatterns = [
     path("logout/", auth_views.LogoutView.as_view(template_name="logout.html"), name="logout"),
     path("register/", views.UserRegistrationView.as_view(), name="register"),
 
+    # Верифікація електронної пошти
+    path("verify-email/<uuid:token>/", views.EmailVerificationView.as_view(), name="verify-email"),
+    path("resend-verification/", views.resend_verification_email, name="resend-verification"),
+
     # Профіль користувача
     path("profile/", views.UserProfileView.as_view(), name="profile"),
     path("change-password/", views.change_password_view, name="change-password"),

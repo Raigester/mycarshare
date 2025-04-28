@@ -25,6 +25,7 @@ def license_image_upload_path(instance, filename):
 class User(AbstractUser):
     """Розширена модель користувача"""
 
+    email = models.EmailField(unique=True) # Електронна пошта користувача
     phone_number = models.CharField(
         validators=[validate_phone_number],
         max_length=17,
@@ -45,6 +46,8 @@ class User(AbstractUser):
     is_blocked = models.BooleanField(default=False)  # Чи заблокований користувач
     created_at = models.DateTimeField(auto_now_add=True)  # Дата створення запису
     updated_at = models.DateTimeField(auto_now=True)  # Дата останнього оновлення запису
+    is_email_verified = models.BooleanField(default=False) # Чи підтверджена електронна пошта
+    email_verification_token = models.UUIDField(default=uuid.uuid4, editable=False) # Токен для підтвердження пошти
 
     def __str__(self):
         """Повертає ім'я користувача як рядок"""

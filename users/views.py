@@ -1,12 +1,14 @@
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.views import LoginView
+from django.core.mail import send_mail
 from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
 from django.utils.decorators import method_decorator
-from django.views.generic import CreateView, ListView, UpdateView
+from django.views.generic import CreateView, ListView, UpdateView, View
 from django_ratelimit.decorators import ratelimit
 
 from .forms import (
@@ -29,6 +31,7 @@ class UserRegistrationView(CreateView):
     def form_valid(self, form):
         """
         Обробляє валідну форму та зберігає дані користувача.
+        Відправляє електронний лист з підтвердженням.
 
         Args:
             form: Валідована форма реєстрації користувача.
@@ -36,9 +39,46 @@ class UserRegistrationView(CreateView):
         Returns:
             HttpResponse: Перенаправлення на сторінку успіху.
         """
-        form.save()
-        messages.success(self.request, "Акаунт успішно створено! Тепер ви можете увійти.")
+        user = form.save()
+
+        # Send verification email
+        self.send_verification_email(user)
+
+        messages.success(
+            self.request,
+            "Акаунт успішно створено! Перевірте вашу електронну пошту для активації акаунту."
+        )
         return super().form_valid(form)
+
+    def send_verification_email(self, user):
+        """
+        Відправляє електронний лист з підтвердженням.
+
+        Args:
+            user: Користувач, якому відправляється лист.
+        """
+        subject = "Активація акаунту Car Sharing"
+        verification_url = f"{settings.BASE_URL}/accounts/verify-email/{user.email_verification_token}/"
+        message = f"""
+        Вітаємо, {user.username}!
+
+        Дякуємо за реєстрацію на нашому сервісі Car Sharing.
+        Для активації вашого акаунту, будь ласка, перейдіть за посиланням нижче:
+
+        {verification_url}
+
+        Якщо ви не реєструвались на нашому сервісі, проігноруйте цей лист.
+
+        З повагою,
+        Команда Car Sharing
+        """
+        send_mail(
+            subject,
+            message,
+            settings.EMAIL_HOST_USER,
+            [user.email],
+            fail_silently=False,
+        )
 
 # Захист від брутфорсу обмеження кількості запитів до 3 разів на 5 хвилин
 @method_decorator(ratelimit(key="ip", rate="3/5m", method="POST", block=True), name="dispatch")
@@ -283,3 +323,82 @@ def user_balance_view(request):
         "balance": balance,
         "form": form
     })
+
+
+
+
+class EmailVerificationView(View):
+    """Представлення для верифікації електронної пошти"""
+
+    def get(self, request, token):
+        """
+        Обробляє запит на верифікацію електронної пошти.
+
+        Args:
+            request: HTTP запит.
+            token: Токен верифікації.
+
+        Returns:
+            HttpResponse: Перенаправлення на сторінку входу.
+        """
+        try:
+            user = User.objects.get(email_verification_token=token)
+            user.is_email_verified = True
+            user.is_active = True
+            user.save()
+            messages.success(request, "Ваш акаунт успішно активовано! Тепер ви можете увійти.")
+        except User.DoesNotExist:
+            messages.error(request, "Недійсний токен активації.")
+
+        return redirect("login")
+
+def resend_verification_email(request):
+    """
+    Повторно відправляє електронний лист з підтвердженням.
+
+    Args:
+        request: HTTP запит.
+
+    Returns:
+        HttpResponse: Рендер сторінки повторної відправки або перенаправлення.
+    """
+    if request.method == "POST":
+        email = request.POST.get("email")
+        try:
+            user = User.objects.get(email=email)
+            if user.is_email_verified:
+                messages.info(request, "Цей акаунт вже активовано.")
+                return redirect("login")
+
+            subject = "Активація акаунту Car Sharing"
+            verification_url = f"{settings.BASE_URL}/accounts/verify-email/{user.email_verification_token}/"
+            message = f"""
+            Вітаємо, {user.username}!
+
+            Дякуємо за реєстрацію на нашому сервісі Car Sharing.
+            Для активації вашого акаунту, будь ласка, перейдіть за посиланням нижче:
+
+            {verification_url}
+
+            Якщо ви не реєструвались на нашому сервісі, проігноруйте цей лист.
+
+            З повагою,
+            Команда Car Sharing
+            """
+            send_mail(
+                subject,
+                message,
+                settings.EMAIL_HOST_USER,
+                [user.email],
+                fail_silently=False,
+            )
+
+            messages.success(
+                request,
+                "Лист з підтвердженням повторно надіслано. Перевірте вашу електронну пошту."
+            )
+            return redirect("login")
+        except User.DoesNotExist:
+            messages.error(request, "Користувача з таким email не знайдено.")
+
+    return render(request, "resend_verification.html")

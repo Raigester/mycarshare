@@ -25,6 +25,13 @@ class UserRegistrationForm(UserCreationForm):
             raise ValidationError("Цей email вже використовується")
         return email
 
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.is_active = False  # Користувач не активний до підтвердження email
+        if commit:
+            user.save()
+        return user
+
 class UserProfileUpdateForm(forms.ModelForm):
     """Форма для оновлення профілю користувача"""
     date_of_birth = forms.DateField(

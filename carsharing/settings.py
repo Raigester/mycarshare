@@ -145,6 +145,15 @@ CELERY_TASK_SERIALIZER = "json"  # Серіалізація завдань у ф
 CELERY_RESULT_SERIALIZER = "json"  # Серіалізація результатів у формат JSON
 CELERY_TIMEZONE = "Europe/Kyiv"  # Часовий пояс для завдань
 
+# Email налаштування
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend" # Використання консолі для відправки електронних листів
+EMAIL_HOST = "localhost" # Хост для SMTP-сервера
+EMAIL_PORT = 1025 # Порт для SMTP-сервера
+EMAIL_USE_TLS = False # Використання TLS для безпеки
+EMAIL_HOST_USER = "" # Ім'я користувача для SMTP-сервера
+EMAIL_HOST_PASSWORD = "" # Пароль для SMTP-сервера
+BASE_URL = "http://localhost:8000" # Базовий URL для електронних листів
+
 # Налаштування кешу для обмеження частоти запитів
 CACHES = {
     "default": {
@@ -165,3 +174,4 @@ LIQPAY_PRIVATE_KEY = config("LIQPAY_PRIVATE_KEY") # Приватний ключ 
 # Налаштування платежів
 MIN_PAYMENT_AMOUNT = "10.00"  # Мінімальна сума депозиту
 MAX_PAYMENT_AMOUNT = "10000.00"  # Максимальна сума депозиту
+
